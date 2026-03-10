@@ -141,5 +141,8 @@ vite.config.ts.timestamp-*
 # Shopify build cache
 .shopify-cache/
 
+# Vercel
+.vercel/
+
 # OS
 .DS_Store
