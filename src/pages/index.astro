@@ -645,7 +645,7 @@ const catDataJSON = JSON.stringify(
 
     // ── Pre-fetched category product data ────────────────────────────────
     var catData = {};
-    fetch("/data/ortho-cat.json").then(function(r){return r.json()}).then(function(d){catData=d;}).catch(function(){});
+    var catDataReady = fetch("/data/ortho-cat.json").then(function(r){return r.json()}).then(function(d){catData=d;}).catch(function(){});
 
     // ── Carousel helpers ─────────────────────────────────────────────────
     function getDots() {
@@ -784,8 +784,10 @@ const catDataJSON = JSON.stringify(
     // ── Initial arrow bind ───────────────────────────────────────────────
     bindArrows();
 
-    // ── Auto-select Neck as default ──────────────────────────────────────
-    document.querySelector('.body-dot[data-handle="cervical"]')?.click();
+    // ── Auto-select Neck as default (after data loads) ───────────────────
+    catDataReady.then(function() {
+      document.querySelector('.body-dot[data-handle="cervical"]')?.click();
+    });
   })();
   </script>
 </Layout>
