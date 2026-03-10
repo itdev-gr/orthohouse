@@ -1,0 +1,630 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { getAllProducts } from "../lib/shopify";
+
+const products = await getAllProducts();
+---
+
+<Layout title="Search – OrthoHouse Cyprus">
+  <a href="/" class="back">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+    </svg>
+    Back to products
+  </a>
+
+  <div class="search-layout">
+    <!-- LEFT: filter panel -->
+    <aside class="filter-panel" id="filter-panel">
+      <div class="filter-header">
+        <span class="filter-heading">Filters</span>
+        <button class="clear-btn" id="clear-filters">Clear all</button>
+      </div>
+
+      <!-- Price range (always shown) -->
+      <div class="filter-group" id="fg-price">
+        <div class="fg-title">Price</div>
+        <div class="price-inputs">
+          <input type="number" id="price-min" class="price-input" placeholder="Min" min="0" />
+          <span class="price-sep">–</span>
+          <input type="number" id="price-max" class="price-input" placeholder="Max" min="0" />
+        </div>
+        <button class="apply-price-btn" id="apply-price">Apply</button>
+      </div>
+
+      <!-- Dynamic option/tag groups injected by JS -->
+      <div id="filter-option-groups"></div>
+    </aside>
+
+    <!-- RIGHT: title + results -->
+    <div class="search-main">
+      <h1 id="search-title">Search Results</h1>
+
+      <!-- Empty state — shown by JS when no results -->
+      <div class="search-empty" id="search-empty" style="display:none">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="52" height="52" class="empty-icon">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+        <p>No products found for <strong id="empty-term"></strong></p>
+        <a href="/" class="browse-all-btn">Browse all products</a>
+      </div>
+
+      <!-- Card grid — populated by JS -->
+      <div class="grid" id="search-grid"></div>
+    </div>
+  </div>
+</Layout>
+
+<!-- All product data embedded at build time (filtered client-side) -->
+<script id="all-products" type="application/json" set:html={JSON.stringify(products)} />
+
+<script is:inline>
+(function () {
+  var q          = new URLSearchParams(window.location.search).get("q") || "";
+  var titleEl    = document.getElementById("search-title");
+  var grid       = document.getElementById("search-grid");
+  var emptyEl    = document.getElementById("search-empty");
+  var emptyTerm  = document.getElementById("empty-term");
+  var clearBtn   = document.getElementById("clear-filters");
+  var priceMinEl = document.getElementById("price-min");
+  var priceMaxEl = document.getElementById("price-max");
+  var applyPriceBtn = document.getElementById("apply-price");
+  var optGroupsEl   = document.getElementById("filter-option-groups");
+
+  // Reflect the query back into the nav search input
+  var navInput = document.querySelector(".top-search-input");
+  if (navInput && q) navInput.value = q;
+
+  var all = JSON.parse(document.getElementById("all-products").textContent);
+
+  // 1. Filter by search query
+  var queryFiltered = q
+    ? all.filter(function (p) {
+        var n = q.toLowerCase();
+        return (
+          p.title.toLowerCase().includes(n) ||
+          (p.description || "").toLowerCase().includes(n)
+        );
+      })
+    : all;
+
+  // Active filter state
+  var activeFilters = {
+    priceMin: null,
+    priceMax: null,
+    options: {},        // { "Size": Set<string>, "Color": Set<string> }
+    tags: new Set()
+  };
+
+  // 2. Build dynamic filter UI from queryFiltered
+  function buildFilterUI(products) {
+    var optMap = {};    // { "Size": { "S": count, "M": count } }
+    var tagMap = {};    // { "electric": count }
+    var pMin = Infinity, pMax = -Infinity;
+
+    products.forEach(function (p) {
+      var amt = parseFloat(p.priceRange.minVariantPrice.amount);
+      if (amt < pMin) pMin = amt;
+      if (amt > pMax) pMax = amt;
+
+      // Variant selectedOptions — collect unique values per product (count products, not variants)
+      var variants = p.variants && p.variants.nodes ? p.variants.nodes : [];
+      var seenOpts = {}; // track which opt name+value we've already counted for this product
+      variants.forEach(function (v) {
+        var opts = v.selectedOptions || [];
+        opts.forEach(function (opt) {
+          // Skip Shopify's default single-variant placeholder
+          if (opt.name === "Title" && opt.value === "Default Title") return;
+          var key = opt.name + "||" + opt.value;
+          if (seenOpts[key]) return; // already counted this product for this value
+          seenOpts[key] = true;
+          if (!optMap[opt.name]) optMap[opt.name] = {};
+          optMap[opt.name][opt.value] = (optMap[opt.name][opt.value] || 0) + 1;
+        });
+      });
+
+      // Tags — each tag counts the product once
+      var tags = p.tags || [];
+      tags.forEach(function (tag) {
+        tagMap[tag] = (tagMap[tag] || 0) + 1;
+      });
+    });
+
+    // Seed price inputs with actual range hints
+    if (isFinite(pMin)) priceMinEl.placeholder = "Min (" + Math.floor(pMin) + ")";
+    if (isFinite(pMax)) priceMaxEl.placeholder = "Max (" + Math.ceil(pMax) + ")";
+
+    // Build option groups
+    optGroupsEl.innerHTML = "";
+
+    Object.keys(optMap).sort().forEach(function (name) {
+      var values = optMap[name];
+      var group = document.createElement("div");
+      group.className = "filter-group";
+
+      var titleDiv = document.createElement("div");
+      titleDiv.className = "fg-title";
+      titleDiv.textContent = name;
+      group.appendChild(titleDiv);
+
+      Object.keys(values).sort().forEach(function (val) {
+        var label = document.createElement("label");
+        label.className = "filter-option";
+
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.filterType = "option";
+        cb.dataset.optName = name;
+        cb.dataset.optValue = val;
+        cb.addEventListener("change", onFilterChange);
+
+        var span = document.createElement("span");
+        span.textContent = val;
+
+        var countSpan = document.createElement("span");
+        countSpan.className = "opt-count";
+        countSpan.textContent = values[val];
+
+        label.appendChild(cb);
+        label.appendChild(span);
+        label.appendChild(countSpan);
+        group.appendChild(label);
+      });
+
+      optGroupsEl.appendChild(group);
+    });
+
+    // Build tag group (only if >1 distinct tag)
+    var tagKeys = Object.keys(tagMap).sort();
+    if (tagKeys.length > 1) {
+      var tagGroup = document.createElement("div");
+      tagGroup.className = "filter-group";
+
+      var tagTitleDiv = document.createElement("div");
+      tagTitleDiv.className = "fg-title";
+      tagTitleDiv.textContent = "Type";
+      tagGroup.appendChild(tagTitleDiv);
+
+      tagKeys.forEach(function (tag) {
+        var label = document.createElement("label");
+        label.className = "filter-option";
+
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.filterType = "tag";
+        cb.dataset.tagValue = tag;
+        cb.addEventListener("change", onFilterChange);
+
+        var span = document.createElement("span");
+        span.textContent = tag;
+
+        var countSpan = document.createElement("span");
+        countSpan.className = "opt-count";
+        countSpan.textContent = tagMap[tag];
+
+        label.appendChild(cb);
+        label.appendChild(span);
+        label.appendChild(countSpan);
+        tagGroup.appendChild(label);
+      });
+
+      optGroupsEl.appendChild(tagGroup);
+    }
+
+    // Hide the filter panel when nothing to filter
+    var hasFilters = Object.keys(optMap).length > 0 || tagKeys.length > 1;
+    document.getElementById("filter-panel").style.display = hasFilters ? "" : "none";
+  }
+
+  // 3. Apply active filters → re-render
+  function applyFilters() {
+    var result = queryFiltered.filter(function (p) {
+      var amt = parseFloat(p.priceRange.minVariantPrice.amount);
+
+      // Price range
+      if (activeFilters.priceMin !== null && amt < activeFilters.priceMin) return false;
+      if (activeFilters.priceMax !== null && amt > activeFilters.priceMax) return false;
+
+      // Option filters — product must match ALL active option groups (OR within each group)
+      var optNames = Object.keys(activeFilters.options);
+      for (var i = 0; i < optNames.length; i++) {
+        var name = optNames[i];
+        var allowed = activeFilters.options[name];
+        if (allowed.size === 0) continue;
+        var productVals = new Set();
+        var variants = p.variants && p.variants.nodes ? p.variants.nodes : [];
+        variants.forEach(function (v) {
+          (v.selectedOptions || []).forEach(function (opt) {
+            if (opt.name === name) productVals.add(opt.value);
+          });
+        });
+        var match = false;
+        productVals.forEach(function (v) { if (allowed.has(v)) match = true; });
+        if (!match) return false;
+      }
+
+      // Tag filters — product must have at least one of the active tags
+      if (activeFilters.tags.size > 0) {
+        var productTags = new Set(p.tags || []);
+        var tagMatch = false;
+        activeFilters.tags.forEach(function (t) {
+          if (productTags.has(t)) tagMatch = true;
+        });
+        if (!tagMatch) return false;
+      }
+
+      return true;
+    });
+
+    renderCards(result);
+    updateHeading(result.length);
+  }
+
+  function onFilterChange(e) {
+    var cb = e.target;
+    if (cb.dataset.filterType === "option") {
+      var name = cb.dataset.optName;
+      if (!activeFilters.options[name]) activeFilters.options[name] = new Set();
+      if (cb.checked) activeFilters.options[name].add(cb.dataset.optValue);
+      else activeFilters.options[name].delete(cb.dataset.optValue);
+    } else if (cb.dataset.filterType === "tag") {
+      if (cb.checked) activeFilters.tags.add(cb.dataset.tagValue);
+      else activeFilters.tags.delete(cb.dataset.tagValue);
+    }
+    applyFilters();
+  }
+
+  applyPriceBtn.addEventListener("click", function () {
+    var mn = parseFloat(priceMinEl.value);
+    var mx = parseFloat(priceMaxEl.value);
+    activeFilters.priceMin = isNaN(mn) ? null : mn;
+    activeFilters.priceMax = isNaN(mx) ? null : mx;
+    applyFilters();
+  });
+
+  // Also apply price on Enter key in price inputs
+  priceMinEl.addEventListener("keydown", function (e) { if (e.key === "Enter") applyPriceBtn.click(); });
+  priceMaxEl.addEventListener("keydown", function (e) { if (e.key === "Enter") applyPriceBtn.click(); });
+
+  clearBtn.addEventListener("click", function () {
+    activeFilters.priceMin = null;
+    activeFilters.priceMax = null;
+    activeFilters.options = {};
+    activeFilters.tags = new Set();
+    priceMinEl.value = "";
+    priceMaxEl.value = "";
+    optGroupsEl.querySelectorAll("input[type=checkbox]").forEach(function (cb) {
+      cb.checked = false;
+    });
+    applyFilters();
+  });
+
+  // 4. Render helpers
+  function cardHtml(p) {
+    var price = p.priceRange.minVariantPrice;
+    var imgHtml = p.featuredImage
+      ? '<img src="' +
+        p.featuredImage.url +
+        '" alt="' +
+        (p.featuredImage.altText || p.title).replace(/"/g, "&quot;") +
+        '" />'
+      : '<div class="card-img-placeholder"></div>';
+    return (
+      '<a class="card" href="/products/' +
+      p.handle +
+      '">' +
+      '<div class="card-img-wrap">' +
+      imgHtml +
+      "</div>" +
+      '<div class="info">' +
+      '<h2 class="card-title">' +
+      p.title +
+      "</h2>" +
+      '<p class="price">' +
+      price.currencyCode +
+      " " +
+      parseFloat(price.amount).toFixed(2) +
+      "</p>" +
+      '<div class="card-cta">View Product ' +
+      '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />' +
+      "</svg>" +
+      "</div>" +
+      "</div>" +
+      "</a>"
+    );
+  }
+
+  function renderCards(products) {
+    if (!products.length) {
+      grid.innerHTML = "";
+      emptyEl.style.display = "";
+      if (emptyTerm) {
+        emptyTerm.textContent = q ? '"' + q + '"' : "your filters";
+      }
+    } else {
+      emptyEl.style.display = "none";
+      grid.innerHTML = products.map(cardHtml).join("");
+    }
+  }
+
+  function updateHeading(count) {
+    if (q) {
+      titleEl.textContent =
+        count + " result" + (count !== 1 ? "s" : "") + ' for "' + q + '"';
+    } else {
+      titleEl.textContent = "All Products (" + count + ")";
+    }
+  }
+
+  // 5. Initial render
+  if (!queryFiltered.length) {
+    document.getElementById("filter-panel").style.display = "none";
+    emptyEl.style.display = "";
+    if (emptyTerm) emptyTerm.textContent = q ? '"' + q + '"' : "";
+    titleEl.textContent = q ? 'No results for "' + q + '"' : "All Products (0)";
+  } else {
+    buildFilterUI(queryFiltered);
+    renderCards(queryFiltered);
+    updateHeading(queryFiltered.length);
+  }
+})();
+</script>
+
+<style is:global>
+  h1 {
+    margin-bottom: 1.5rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  /* Back link */
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 1.25rem;
+    color: #1e3a5f;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .back:hover { color: #2563eb; }
+
+  /* Two-column layout */
+  .search-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+
+  /* Filter sidebar */
+  .filter-panel {
+    width: 220px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 1.5rem;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 12px;
+    padding: 1.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+  }
+  .filter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .filter-heading {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+  }
+  .clear-btn {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+  }
+  .clear-btn:hover { text-decoration: underline; }
+
+  /* Filter groups */
+  .filter-group {
+    border-top: 1px solid #f0f4f8;
+    padding: 1rem 0;
+  }
+  .fg-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Price inputs */
+  .price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+  }
+  .price-input {
+    width: 70px;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #1a1a1a;
+  }
+  .price-input:focus {
+    outline: 2px solid #2563eb;
+    border-color: transparent;
+  }
+  .price-sep { color: #999; font-size: 0.85rem; }
+  .apply-price-btn {
+    display: block;
+    width: 100%;
+    padding: 0.4rem;
+    background: #1e3a5f;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .apply-price-btn:hover { background: #2d5a8e; }
+
+  /* Checkbox filter options */
+  .filter-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: #333;
+  }
+  .filter-option input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #1e3a5f;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .filter-option .opt-count {
+    margin-left: auto;
+    color: #aaa;
+    font-size: 0.75rem;
+  }
+
+  /* Right-side content column */
+  .search-main { flex: 1; min-width: 0; }
+
+  /* Empty state */
+  .search-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4rem 2rem;
+    color: #aaa;
+    text-align: center;
+  }
+  .empty-icon { margin-bottom: 1rem; color: #d1d5db; }
+  .search-empty p { font-size: 1rem; color: #666; margin-bottom: 1.5rem; }
+  .search-empty strong { color: #1a1a1a; }
+  .browse-all-btn {
+    display: inline-block;
+    padding: 0.65rem 1.5rem;
+    background: #1e3a5f;
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+  }
+  .browse-all-btn:hover { background: #2d5a8e; }
+
+  /* Product grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Card */
+  .card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #e8edf3;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(30, 58, 95, 0.12);
+  }
+
+  /* Image area */
+  .card-img-wrap {
+    background: #f8fafc;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+  }
+  .card-img-wrap img {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    padding: 0.75rem;
+    display: block;
+    transition: transform 0.3s;
+  }
+  .card:hover .card-img-wrap img { transform: scale(1.04); }
+  .card-img-placeholder {
+    width: 100%;
+    height: 180px;
+    background: #e8edf3;
+  }
+
+  /* Info */
+  .info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0.85rem 1rem 1rem;
+    border-top: 1px solid #f0f4f8;
+  }
+  .card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.4;
+    margin: 0 0 0.35rem 0;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .price {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 0 0 0.75rem 0;
+  }
+  .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    transition: color 0.15s, gap 0.15s;
+  }
+  .card:hover .card-cta { color: #2d5a8e; gap: 0.5rem; }
+
+  /* Mobile: stack vertically */
+  @media (max-width: 768px) {
+    .search-layout { flex-direction: column; }
+    .filter-panel {
+      width: 100%;
+      position: static;
+    }
+  }
+</style>

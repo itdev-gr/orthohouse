@@ -1,0 +1,1704 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { getProducts, PRODUCTS_QUERY, getCollectionPreview } from "../lib/shopify";
+
+const products = await getProducts(12);
+
+// Orthopaedic showcase — 9 products → 3 slides of 3
+const orthoRaw = await getCollectionPreview("orthopedic-braces-supports", 9);
+const orthoSlides: any[][] = [];
+for (let i = 0; i < orthoRaw.length; i += 3) {
+  orthoSlides.push(orthoRaw.slice(i, i + 3));
+}
+
+// ── New Products section — tab category fetches ──────────────────────────
+const NP_TABS = [
+  { label: "All",                     handle: "all" },
+  { label: "Orthopaedics",            handle: "orthopedic-braces-supports" },
+  { label: "Walking Aids",            handle: "walking-aids" },
+  { label: "Wheelchairs & Home Care", handle: "wheelchairs-and-home-care-aids" },
+  { label: "Comfort & Well Being",    handle: "exercise-and-well-being" },
+  { label: "Kybun Shoes",             handle: "kybun-shoes" },
+] as const;
+
+const npFetches = await Promise.all(
+  NP_TABS.slice(1).map(t => getCollectionPreview(t.handle, 20).catch(() => []))
+);
+
+const npDataRaw: Record<string, any[]> = { all: products.slice(0, 20) };
+NP_TABS.slice(1).forEach((t, i) => { npDataRaw[t.handle] = npFetches[i]; });
+
+function npSerialize(p: any) {
+  const v = p.variants?.nodes?.[0];
+  const price = parseFloat(v?.price?.amount ?? p.priceRange?.minVariantPrice?.amount ?? "0");
+  const ca    = parseFloat(v?.compareAtPrice?.amount ?? "0");
+  const cu    = v?.price?.currencyCode ?? p.priceRange?.minVariantPrice?.currencyCode ?? "EUR";
+  return { t: p.title, h: p.handle, p: price, ca: ca > price ? ca : 0,
+           cu, a: v?.availableForSale ?? true,
+           img: p.featuredImage?.url ?? "", alt: p.featuredImage?.altText ?? p.title };
+}
+
+const npJSON = JSON.stringify(
+  Object.fromEntries(Object.entries(npDataRaw).map(([k, arr]) => [k, (arr as any[]).map(npSerialize)]))
+);
+
+// Initial "All" slides — 4 per slide
+const NP_PER_SLIDE = 4;
+const npInitSlides: any[][] = [];
+for (let i = 0; i < (npDataRaw.all as any[]).length; i += NP_PER_SLIDE) {
+  npInitSlides.push((npDataRaw.all as any[]).slice(i, i + NP_PER_SLIDE));
+}
+
+// ── Body-dot category products — fetched at build time ──────────────────
+const BODY_HANDLES = [
+  "head","cervical","shoulder","thoracic","elbow","upper-limb",
+  "wrist-thumb-supports","hand","fingers","lumbar",
+  "trunk-lumbar-supports","hip","thigh","lower-limb","knee",
+  "knee-braces","calf","ankle","foot","orthopedic-insoles"
+] as const;
+
+const catResults = await Promise.all(
+  BODY_HANDLES.map(h => getCollectionPreview(h, 9).catch(() => []))
+);
+
+const catProductMap: Record<string, any[]> = {};
+BODY_HANDLES.forEach((h, i) => { catProductMap[h] = catResults[i]; });
+
+const catDataJSON = JSON.stringify(
+  Object.fromEntries(
+    Object.entries(catProductMap).map(([handle, prods]) => [
+      handle,
+      (prods as any[]).map((p: any) => {
+        const v     = p.variants?.nodes?.[0];
+        const price = parseFloat(v?.price?.amount ?? p.priceRange?.minVariantPrice?.amount ?? "0");
+        const ca    = parseFloat(v?.compareAtPrice?.amount ?? "0");
+        const cu    = v?.price?.currencyCode ?? p.priceRange?.minVariantPrice?.currencyCode ?? "EUR";
+        const avail = v?.availableForSale ?? true;
+        return {
+          t:   p.title,
+          h:   p.handle,
+          p:   price,
+          ca:  ca > price ? ca : 0,
+          cu,
+          a:   avail,
+          img: p.featuredImage?.url ?? "",
+          alt: p.featuredImage?.altText ?? p.title,
+        };
+      })
+    ])
+  )
+);
+---
+
+<Layout
+  title="OrthoHouse Cyprus"
+  swrData={{
+    query: PRODUCTS_QUERY,
+    variables: { first: 12 },
+    data: products,
+    extract: "products.nodes",
+  }}
+>
+  <!-- ══════════════════════════════════════
+       HERO BANNER
+       ══════════════════════════════════════ -->
+  <div class="hero-banner">
+    <img src="/ChatGPT_Image_Nov_25_2025_10_06_16_PM.webp" alt="OrthoHouse Cyprus" />
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <p class="hero-tagline">AT ORTHOHOUSE, WE MAKE IT EASIER FOR YOU TO MOVE BETTER AND LIVE BETTER</p>
+    </div>
+    <div class="hero-dots">
+      <span class="hero-dot active"></span>
+      <span class="hero-dot"></span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       NEW PRODUCTS CAROUSEL
+       ══════════════════════════════════════ -->
+  <section class="newprod-section">
+
+    <!-- Header: title left · filter tabs right -->
+    <div class="newprod-header">
+      <h2 class="newprod-title">New Products</h2>
+      <div class="newprod-tabs" id="newprod-tabs">
+        {NP_TABS.map((t, i) => (
+          <button class={`newprod-tab${i === 0 ? " active" : ""}`} data-tab={t.handle}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <!-- Carousel -->
+    <div class="newprod-carousel-wrap">
+      <button class="newprod-arrow" id="newprod-prev" aria-label="Previous slide">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/>
+        </svg>
+      </button>
+
+      <div class="newprod-slider-clip">
+        <div class="newprod-track" id="newprod-track">
+          {npInitSlides.map((slide) => (
+            <div class="newprod-slide">
+              {slide.map((p: any) => {
+                const v = p.variants?.nodes?.[0];
+                const price = parseFloat(v?.price?.amount ?? p.priceRange?.minVariantPrice?.amount ?? "0");
+                const compareAt = parseFloat(v?.compareAtPrice?.amount ?? "0");
+                const currency = v?.price?.currencyCode ?? p.priceRange?.minVariantPrice?.currencyCode ?? "EUR";
+                const isAvail = v?.availableForSale ?? true;
+                const isSale = compareAt > 0 && compareAt > price;
+                return (
+                  <a href={`/products/${p.handle}`} class="ortho-card">
+                    {isSale && <span class="ortho-badge">Sale</span>}
+                    <div class="ortho-card-img">
+                      {p.featuredImage
+                        ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} loading="lazy"/>
+                        : <div class="ortho-card-no-img"/>}
+                    </div>
+                    <div class="ortho-card-body">
+                      <p class="ortho-card-name">{p.title}</p>
+                      <div class="ortho-price-row">
+                        {isSale && <s class="ortho-compare">{currency} {compareAt.toFixed(2)}</s>}
+                        <span class={`ortho-price${isSale ? " sale" : ""}`}>{currency} {price.toFixed(2)}</span>
+                      </div>
+                      <span class={`ortho-avail${isAvail ? " in" : " out"}`}>
+                        ● {isAvail ? "In Stock" : "Out of Stock"}
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button class="newprod-arrow" id="newprod-next" aria-label="Next slide">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Pagination dots -->
+    <div class="newprod-dots-wrap">
+      <div class="newprod-dots" id="newprod-dots">
+        {npInitSlides.map((_, i) => (
+          <button class={`newprod-dot${i === 0 ? " active" : ""}`} data-slide={i} aria-label={`Slide ${i + 1}`}/>
+        ))}
+      </div>
+    </div>
+
+  </section>
+
+  <script id="newprod-data" type="application/json" set:html={npJSON}></script>
+
+  <!-- ══════════════════════════════════════
+       ORTHOPAEDIC SHOWCASE
+       ══════════════════════════════════════ -->
+  <section class="ortho-section">
+
+    <!-- ── LEFT: human body image + dot markers ── -->
+    <div class="ortho-left">
+      <div class="body-map-wrap">
+        <img class="human-img" src="/humanbody-1.jpg" alt="Orthopaedic human body illustration" loading="lazy"/>
+        <div class="body-map-overlay" aria-hidden="true">
+          <div class="body-dot" data-handle="head"                 style="left:50%;top:9%"><span class="dot-label">Head</span></div>
+          <div class="body-dot" data-handle="cervical"             style="left:50%;top:16%"><span class="dot-label">Neck</span></div>
+          <div class="body-dot" data-handle="shoulder"             style="left:35%;top:23%"><span class="dot-label">Shoulder</span></div>
+          <div class="body-dot" data-handle="thoracic"             style="left:50%;top:32%"><span class="dot-label">Thoracic</span></div>
+          <div class="body-dot" data-handle="elbow"                style="left:22%;top:22%"><span class="dot-label">Elbow</span></div>
+          <div class="body-dot" data-handle="upper-limb"           style="left:78%;top:26%"><span class="dot-label">Upper Limb</span></div>
+          <div class="body-dot" data-handle="wrist-thumb-supports" style="left:10%;top:22%"><span class="dot-label">Wrist &amp; Thumb</span></div>
+          <div class="body-dot" data-handle="hand"                 style="left:93%;top:22%"><span class="dot-label">Hand</span></div>
+          <div class="body-dot" data-handle="fingers"              style="left:7%;top:23%"><span class="dot-label">Fingers</span></div>
+          <div class="body-dot" data-handle="lumbar"               style="left:50%;top:47%"><span class="dot-label">Lumbar</span></div>
+          <div class="body-dot" data-handle="trunk-lumbar-supports"style="left:43%;top:42%"><span class="dot-label">Trunk &amp; Lumbar</span></div>
+          <div class="body-dot" data-handle="hip"                  style="left:42%;top:54%"><span class="dot-label">Hip</span></div>
+          <div class="body-dot" data-handle="thigh"                style="left:42%;top:64%"><span class="dot-label">Thigh</span></div>
+          <div class="body-dot" data-handle="lower-limb"           style="left:58%;top:64%"><span class="dot-label">Lower Limb</span></div>
+          <div class="body-dot" data-handle="knee"                 style="left:42%;top:73%"><span class="dot-label">Knee</span></div>
+          <div class="body-dot" data-handle="knee-braces"          style="left:58%;top:73%"><span class="dot-label">Knee Braces</span></div>
+          <div class="body-dot" data-handle="calf"                 style="left:42%;top:82%"><span class="dot-label">Calf</span></div>
+          <div class="body-dot" data-handle="ankle"                style="left:58%;top:90%"><span class="dot-label">Ankle</span></div>
+          <div class="body-dot" data-handle="foot"                 style="left:42%;top:94%"><span class="dot-label">Foot</span></div>
+          <div class="body-dot" data-handle="orthopedic-insoles"   style="left:58%;top:94%"><span class="dot-label">Orthopedic Insoles</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: product slider + banner ── -->
+    <div class="ortho-right">
+
+      <div class="ortho-header">
+        <h2 class="ortho-title" id="ortho-title">Orthopaedic Products</h2>
+        <p class="ortho-subtitle" id="ortho-subtitle">Premium supports &amp; braces for every need</p>
+      </div>
+
+      <!-- Slider -->
+      <div class="ortho-slider-wrap">
+        <div class="ortho-track" id="ortho-track">
+          {orthoSlides.map((slide) => (
+            <div class="ortho-slide">
+              {slide.map((p: any) => {
+                const v = p.variants?.nodes?.[0];
+                const price = parseFloat(v?.price?.amount ?? p.priceRange?.minVariantPrice?.amount ?? "0");
+                const compareAt = parseFloat(v?.compareAtPrice?.amount ?? "0");
+                const currency = v?.price?.currencyCode ?? p.priceRange?.minVariantPrice?.currencyCode ?? "EUR";
+                const isAvail = v?.availableForSale ?? true;
+                const isSale = compareAt > 0 && compareAt > price;
+                return (
+                  <a href={`/products/${p.handle}`} class="ortho-card">
+                    {isSale && <span class="ortho-badge">Sale</span>}
+                    <div class="ortho-card-img">
+                      {p.featuredImage
+                        ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} loading="lazy"/>
+                        : <div class="ortho-card-no-img"/>}
+                    </div>
+                    <div class="ortho-card-body">
+                      <p class="ortho-card-name">{p.title}</p>
+                      <div class="ortho-price-row">
+                        {isSale && <s class="ortho-compare">{currency} {compareAt.toFixed(2)}</s>}
+                        <span class={`ortho-price${isSale ? " sale" : ""}`}>{currency} {price.toFixed(2)}</span>
+                      </div>
+                      <span class={`ortho-avail${isAvail ? " in" : " out"}`}>
+                        ● {isAvail ? "In Stock" : "Out of Stock"}
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Controls: prev · dots · next -->
+      <div class="ortho-controls">
+        <button type="button" class="ortho-arrow" id="ortho-prev" aria-label="Previous slide">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/>
+          </svg>
+        </button>
+        <div class="ortho-dots" id="ortho-dots">
+          {orthoSlides.map((_, i) => (
+            <button type="button" class={`ortho-dot${i === 0 ? " active" : ""}`} data-slide={i} aria-label={`Slide ${i + 1}`}/>
+          ))}
+        </div>
+        <button type="button" class="ortho-arrow" id="ortho-next" aria-label="Next slide">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- GESY / Insurance banner -->
+      <div class="ortho-banner">
+        <div class="ortho-banner-body">
+          <p class="ortho-banner-label">GeSY Approved</p>
+          <p class="ortho-banner-title">Products with GeSY codes available</p>
+          <p class="ortho-banner-sub">Ask us about health-system covered orthopaedic products</p>
+        </div>
+        <a href="/collections/orthopedic-braces-supports" id="ortho-banner-btn" class="ortho-banner-btn">
+          View Full Collection
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+          </svg>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════
+       TRUST / FEATURES BANNER
+       ══════════════════════════════════════ -->
+  <div class="trust-bar">
+    <div class="trust-bar-inner">
+
+      <!-- Same-day delivery -->
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="31" height="31">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+          </svg>
+        </div>
+        <div class="trust-text">
+          <span class="trust-label">Same-day Delivery</span>
+          <span class="trust-sub">For orders within Nicosia</span>
+        </div>
+      </div>
+
+      <div class="trust-divider"></div>
+
+      <!-- Interest-free installments -->
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="31" height="31">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/>
+          </svg>
+        </div>
+        <div class="trust-text">
+          <span class="trust-label">Up to 12 Instalments</span>
+          <span class="trust-sub">Interest-free with all cards</span>
+        </div>
+      </div>
+
+      <div class="trust-divider"></div>
+
+      <!-- Guaranteed quality -->
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="31" height="31">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
+          </svg>
+        </div>
+        <div class="trust-text">
+          <span class="trust-label">Guaranteed Quality</span>
+          <span class="trust-sub">ISO Medical 13485 certified</span>
+        </div>
+      </div>
+
+      <div class="trust-divider"></div>
+
+      <!-- Free shipping -->
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="31" height="31">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/>
+          </svg>
+        </div>
+        <div class="trust-text">
+          <span class="trust-label">Free Shipping</span>
+          <span class="trust-sub">On orders over €15</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       SHOP BY CATEGORY — Bento Grid
+       ══════════════════════════════════════ -->
+  <section class="cat-section">
+    <h2 class="cat-section-title">Shop by Category</h2>
+    <div class="cat-bento">
+
+      <!-- Card 1 · Wheelchairs & Home Care · LEFT TALL -->
+      <a
+        href="/collections/wheelchairs-and-home-care-aids"
+        class="cat-card"
+        aria-label="Wheelchairs & Home Care"
+      >
+        <img
+          class="cat-img"
+          src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=900&auto=format&q=75"
+          alt="Wheelchairs & Home Care"
+          loading="lazy"
+        />
+        <div class="cat-overlay"></div>
+        <div class="cat-content">
+          <span class="cat-name">Wheelchairs &amp; Home Care</span>
+          <span class="cat-cta">
+            Shop Now
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              stroke-width="2.5" stroke="currentColor" width="13" height="13">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Card 2 · Comfort & Well Being · MIDDLE TOP -->
+      <a
+        href="/collections/exercise-and-well-being"
+        class="cat-card"
+        aria-label="Comfort & Well Being"
+      >
+        <img
+          class="cat-img"
+          src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=900&auto=format&q=75"
+          alt="Comfort & Well Being"
+          loading="lazy"
+        />
+        <div class="cat-overlay"></div>
+        <div class="cat-content">
+          <span class="cat-name">Comfort &amp; Well Being</span>
+          <span class="cat-cta">
+            Shop Now
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              stroke-width="2.5" stroke="currentColor" width="13" height="13">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Card 3 · Walking Aids · MIDDLE BOTTOM -->
+      <a
+        href="/collections/walking-aids"
+        class="cat-card"
+        aria-label="Walking Aids"
+      >
+        <img
+          class="cat-img"
+          src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=900&auto=format&q=75"
+          alt="Walking Aids"
+          loading="lazy"
+        />
+        <div class="cat-overlay"></div>
+        <div class="cat-content">
+          <span class="cat-name">Walking Aids</span>
+          <span class="cat-cta">
+            Shop Now
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              stroke-width="2.5" stroke="currentColor" width="13" height="13">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Card 4 · Orthopaedics · RIGHT TALL -->
+      <a
+        href="/collections/orthopedic-braces-supports"
+        class="cat-card"
+        aria-label="Orthopaedics"
+      >
+        <img
+          class="cat-img"
+          src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&auto=format&q=75"
+          alt="Orthopaedics"
+          loading="lazy"
+        />
+        <div class="cat-overlay"></div>
+        <div class="cat-content">
+          <span class="cat-name">Orthopaedics</span>
+          <span class="cat-cta">
+            Shop Now
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              stroke-width="2.5" stroke="currentColor" width="13" height="13">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+          </span>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <script id="ortho-cat-data" type="application/json" set:html={catDataJSON}></script>
+
+  <!-- New Products carousel logic -->
+  <script is:inline>
+  (function () {
+    var NP_PER_SLIDE = 4;
+    var track    = document.getElementById("newprod-track");
+    var dotsWrap = document.getElementById("newprod-dots");
+    var prevBtn  = document.getElementById("newprod-prev");
+    var nextBtn  = document.getElementById("newprod-next");
+    var tabsWrap = document.getElementById("newprod-tabs");
+    if (!track) return;
+
+    var current = 0;
+
+    var npData = {};
+    try {
+      var raw = document.getElementById("newprod-data");
+      if (raw) npData = JSON.parse(raw.textContent || "{}");
+    } catch(e) {}
+
+    function getDots() { return dotsWrap ? Array.from(dotsWrap.querySelectorAll(".newprod-dot")) : []; }
+
+    function esc(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function buildCard(p) {
+      var isSale = p.ca > 0;
+      return '<a href="/products/' + p.h + '" class="ortho-card">'
+        + (isSale ? '<span class="ortho-badge">Sale</span>' : '')
+        + '<div class="ortho-card-img">'
+        + (p.img ? '<img src="' + esc(p.img) + '" alt="' + esc(p.alt) + '" loading="lazy"/>'
+                 : '<div class="ortho-card-no-img"></div>')
+        + '</div><div class="ortho-card-body">'
+        + '<p class="ortho-card-name">' + esc(p.t) + '</p>'
+        + '<div class="ortho-price-row">'
+        + (isSale ? '<s class="ortho-compare">' + esc(p.cu) + ' ' + p.ca.toFixed(2) + '</s>' : '')
+        + '<span class="ortho-price' + (isSale ? ' sale' : '') + '">' + esc(p.cu) + ' ' + p.p.toFixed(2) + '</span>'
+        + '</div>'
+        + '<span class="ortho-avail' + (p.a ? ' in' : ' out') + '">● ' + (p.a ? 'In Stock' : 'Out of Stock') + '</span>'
+        + '</div></a>';
+    }
+
+    function goTo(n) {
+      var dots = getDots();
+      var total = dots.length;
+      if (!total) return;
+      current = ((n % total) + total) % total;
+      track.style.transform = "translateX(-" + (current * 100) + "%)";
+      dots.forEach(function(d, i) { d.classList.toggle("active", i === current); });
+    }
+
+    function bindArrows() {
+      if (prevBtn) prevBtn.onclick = function() { goTo(current - 1); };
+      if (nextBtn) nextBtn.onclick = function() { goTo(current + 1); };
+      getDots().forEach(function(d) {
+        d.onclick = function() { goTo(parseInt(d.dataset.slide)); };
+      });
+    }
+
+    function loadTab(handle) {
+      var prods = npData[handle] || [];
+      if (!prods.length) {
+        track.innerHTML = '<div class="newprod-slide newprod-empty"><p>No products found in this category.</p></div>';
+        dotsWrap.innerHTML = '<button class="newprod-dot active" data-slide="0"></button>';
+        current = 0;
+        track.style.transform = "translateX(0%)";
+        bindArrows();
+        return;
+      }
+      var slides = [];
+      for (var i = 0; i < prods.length; i += NP_PER_SLIDE) slides.push(prods.slice(i, i + NP_PER_SLIDE));
+
+      track.innerHTML = slides.map(function(sl) {
+        return '<div class="newprod-slide">' + sl.map(buildCard).join('') + '</div>';
+      }).join('');
+
+      dotsWrap.innerHTML = slides.map(function(_, i) {
+        return '<button class="newprod-dot' + (i === 0 ? ' active' : '')
+          + '" data-slide="' + i + '" aria-label="Slide ' + (i + 1) + '"></button>';
+      }).join('');
+
+      current = 0;
+      track.style.transform = "translateX(0%)";
+      bindArrows();
+    }
+
+    // Tab click handlers
+    if (tabsWrap) {
+      tabsWrap.querySelectorAll(".newprod-tab").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          tabsWrap.querySelectorAll(".newprod-tab").forEach(function(b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          loadTab(btn.dataset.tab);
+        });
+      });
+    }
+
+    bindArrows();
+  })();
+  </script>
+
+  <script is:inline>
+  (function () {
+    // ── Element refs ─────────────────────────────────────────────────────
+    var track     = document.getElementById("ortho-track");
+    var dotsWrap  = document.getElementById("ortho-dots");
+    var prevBtn   = document.getElementById("ortho-prev");
+    var nextBtn   = document.getElementById("ortho-next");
+    var titleEl   = document.getElementById("ortho-title");
+    var subEl     = document.getElementById("ortho-subtitle");
+    var bannerBtn = document.getElementById("ortho-banner-btn");
+    if (!track) return;
+
+    var current = 0;
+
+    // ── Category metadata ────────────────────────────────────────────────
+    var CAT_META = {
+      "head":                  { title: "Head Supports",             sub: "Helmets, head protection & orthotic aids" },
+      "cervical":              { title: "Neck & Cervical Supports",  sub: "Collars and supports for neck pain relief" },
+      "shoulder":              { title: "Shoulder Supports",         sub: "Stabilization and recovery solutions" },
+      "thoracic":              { title: "Thoracic Supports",         sub: "Back braces for the upper spine & chest" },
+      "elbow":                 { title: "Elbow Supports & Braces",   sub: "Relief for tennis elbow, sprains & injuries" },
+      "upper-limb":            { title: "Upper Limb Supports",       sub: "Full arm supports from shoulder to wrist" },
+      "wrist-thumb-supports":  { title: "Wrist & Thumb Supports",    sub: "Splints and braces for wrist stability" },
+      "hand":                  { title: "Hand Supports",             sub: "Gloves, splints & post-op hand braces" },
+      "fingers":               { title: "Finger Supports",           sub: "Finger splints, rings and buddy straps" },
+      "lumbar":                { title: "Lumbar Supports",           sub: "Lower back belts for pain and posture" },
+      "trunk-lumbar-supports": { title: "Trunk & Lumbar Supports",   sub: "Corsets and supports for the full trunk" },
+      "hip":                   { title: "Hip Supports & Braces",     sub: "Post-surgical and orthotic hip supports" },
+      "thigh":                 { title: "Thigh Supports",            sub: "Compression wraps and thigh sleeves" },
+      "lower-limb":            { title: "Lower Limb Supports",       sub: "Full leg supports and orthoses" },
+      "knee":                  { title: "Knee Supports & Braces",    sub: "Braces for knee pain, injuries & recovery" },
+      "knee-braces":           { title: "Knee Braces",               sub: "Rigid and hinged braces for knee stability" },
+      "calf":                  { title: "Calf Supports",             sub: "Compression sleeves and calf wraps" },
+      "ankle":                 { title: "Ankle Supports & Braces",   sub: "Stabilizers for sprains and ankle injuries" },
+      "foot":                  { title: "Foot Supports",             sub: "Orthotic insoles, drop foot & more" },
+      "orthopedic-insoles":    { title: "Orthopedic Insoles",        sub: "Custom and off-the-shelf insole solutions" },
+    };
+
+    var DEFAULT_TITLE = "Orthopaedic Products";
+    var DEFAULT_SUB   = "Premium supports & braces for every need";
+    var DEFAULT_LINK  = "/collections/orthopedic-braces-supports";
+
+    // ── Pre-fetched category product data ────────────────────────────────
+    var catData = {};
+    try {
+      var raw = document.getElementById("ortho-cat-data");
+      if (raw) catData = JSON.parse(raw.textContent || "{}");
+    } catch(e) {}
+
+    // ── Carousel helpers ─────────────────────────────────────────────────
+    function getDots() {
+      return dotsWrap ? Array.from(dotsWrap.querySelectorAll(".ortho-dot")) : [];
+    }
+
+    function goTo(n) {
+      var dots = getDots();
+      var total = dots.length;
+      if (!total) return;
+      current = ((n % total) + total) % total;
+      track.style.transform = "translateX(-" + (current * 100) + "%)";
+      dots.forEach(function(d, i) { d.classList.toggle("active", i === current); });
+    }
+
+    function bindArrows() {
+      if (prevBtn) prevBtn.onclick = function() { goTo(current - 1); };
+      if (nextBtn) nextBtn.onclick = function() { goTo(current + 1); };
+      getDots().forEach(function(d) {
+        d.addEventListener("click", function() { goTo(parseInt(d.dataset.slide)); });
+      });
+    }
+
+    // ── HTML escape helper ───────────────────────────────────────────────
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    // ── Card builder ─────────────────────────────────────────────────────
+    function buildCard(p) {
+      var isSale = p.ca > 0;
+      var avail  = p.a;
+      return '<a href="/products/' + p.h + '" class="ortho-card">'
+        + (isSale ? '<span class="ortho-badge">Sale</span>' : '')
+        + '<div class="ortho-card-img">'
+        + (p.img
+            ? '<img src="' + escHtml(p.img) + '" alt="' + escHtml(p.alt) + '" loading="lazy"/>'
+            : '<div class="ortho-card-no-img"></div>')
+        + '</div>'
+        + '<div class="ortho-card-body">'
+        + '<p class="ortho-card-name">' + escHtml(p.t) + '</p>'
+        + '<div class="ortho-price-row">'
+        + (isSale ? '<s class="ortho-compare">' + escHtml(p.cu) + ' ' + p.ca.toFixed(2) + '</s>' : '')
+        + '<span class="ortho-price' + (isSale ? ' sale' : '') + '">'
+        + escHtml(p.cu) + ' ' + p.p.toFixed(2)
+        + '</span>'
+        + '</div>'
+        + '<span class="ortho-avail' + (avail ? ' in' : ' out') + '">● '
+        + (avail ? 'In Stock' : 'Out of Stock')
+        + '</span>'
+        + '</div></a>';
+    }
+
+    // ── Rebuild carousel with given product array ─────────────────────────
+    function rebuildCarousel(prods) {
+      // Chunk into slides of 3
+      var slides = [];
+      for (var i = 0; i < prods.length; i += 3) slides.push(prods.slice(i, i + 3));
+      if (!slides.length) return false;
+
+      // Rebuild track HTML
+      track.innerHTML = slides.map(function(slide) {
+        return '<div class="ortho-slide">' + slide.map(buildCard).join('') + '</div>';
+      }).join('');
+
+      // Rebuild pagination dots
+      dotsWrap.innerHTML = slides.map(function(_, i) {
+        return '<button type="button" class="ortho-dot' + (i === 0 ? ' active' : '')
+          + '" data-slide="' + i + '" aria-label="Slide ' + (i + 1) + '"></button>';
+      }).join('');
+
+      current = 0;
+      track.style.transform = "translateX(0%)";
+      bindArrows();
+      return true;
+    }
+
+    // ── Body dot: active-dot state ────────────────────────────────────────
+    var activeBodyDot = null;
+    // Store original track HTML so we can restore without a reload
+    var defaultTrackHTML   = track.innerHTML;
+    var defaultDotsHTML    = dotsWrap ? dotsWrap.innerHTML : "";
+
+    // ── Body dot click handlers ──────────────────────────────────────────
+    document.querySelectorAll(".body-dot[data-handle]").forEach(function(dot) {
+      dot.style.cursor = "pointer";
+      dot.addEventListener("click", function() {
+        var handle = dot.dataset.handle;
+        var prods  = catData[handle] || [];
+        var meta   = CAT_META[handle] || { title: DEFAULT_TITLE, sub: DEFAULT_SUB };
+
+        // Toggle: clicking the active dot resets to default
+        if (activeBodyDot === dot) {
+          activeBodyDot.classList.remove("dot-selected");
+          activeBodyDot = null;
+          if (titleEl)   titleEl.textContent = DEFAULT_TITLE;
+          if (subEl)     subEl.textContent   = DEFAULT_SUB;
+          if (bannerBtn) bannerBtn.href       = DEFAULT_LINK;
+          // Restore original server-rendered HTML
+          track.innerHTML  = defaultTrackHTML;
+          if (dotsWrap) dotsWrap.innerHTML = defaultDotsHTML;
+          current = 0;
+          track.style.transform = "translateX(0%)";
+          bindArrows();
+          return;
+        }
+
+        // Deactivate the previously selected dot
+        if (activeBodyDot) activeBodyDot.classList.remove("dot-selected");
+        activeBodyDot = dot;
+        dot.classList.add("dot-selected");
+
+        // Update panel title + subtitle + banner link
+        if (titleEl)   titleEl.textContent = meta.title;
+        if (subEl)     subEl.textContent   = meta.sub;
+        if (bannerBtn) bannerBtn.href       = "/collections/" + handle;
+
+        // Rebuild carousel or show fallback
+        if (!rebuildCarousel(prods)) {
+          track.innerHTML = '<div class="ortho-slide ortho-no-products">'
+            + '<p>No products found for this category. '
+            + '<a href="/collections/orthopedic-braces-supports">Browse all →</a></p>'
+            + '</div>';
+          if (dotsWrap) dotsWrap.innerHTML =
+            '<button type="button" class="ortho-dot active" data-slide="0"></button>';
+          current = 0;
+          track.style.transform = "translateX(0%)";
+        }
+      });
+    });
+
+    // ── Initial arrow bind ───────────────────────────────────────────────
+    bindArrows();
+
+    // ── Auto-select Neck as default ──────────────────────────────────────
+    document.querySelector('.body-dot[data-handle="cervical"]')?.click();
+  })();
+  </script>
+</Layout>
+
+<style is:global>
+  /* ══════════════════════════════════════
+     TRUST / FEATURES BANNER
+     ══════════════════════════════════════ */
+  .trust-bar {
+    background: #1e3a5f;
+    padding: 1.5rem 1.8rem;
+    margin-bottom: 3rem;
+  }
+  .trust-bar-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 216px;
+  }
+  .trust-icon {
+    flex-shrink: 0;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+  .trust-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+  }
+  .trust-label {
+    font-size: 1.08rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .trust-sub {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.3;
+  }
+  .trust-divider {
+    width: 1px;
+    height: 53px;
+    background: rgba(255, 255, 255, 0.18);
+    flex-shrink: 0;
+  }
+  @media (max-width: 768px) {
+    .trust-divider { display: none; }
+    .trust-bar-inner { gap: 1.5rem; }
+    .trust-item { min-width: 168px; }
+  }
+  @media (max-width: 480px) {
+    .trust-item { min-width: calc(50% - 0.75rem); }
+    .trust-label { font-size: 0.98rem; }
+    .trust-sub   { font-size: 0.84rem; }
+  }
+
+  /* ══════════════════════════════════════
+     HERO BANNER
+     ══════════════════════════════════════ */
+  .hero-banner {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    margin-top: -2rem;
+    line-height: 0;
+    overflow: hidden;
+  }
+  .hero-banner img {
+    width: 100%;
+    height: 520px;
+    display: block;
+    object-fit: cover;
+    object-position: center center;
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 40%,
+      rgba(0,0,0,0.35) 100%
+    );
+  }
+  .hero-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 3rem;
+  }
+  .hero-tagline {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.3;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.35);
+  }
+  .hero-dots {
+    position: absolute;
+    bottom: 1.25rem;
+    right: 1.75rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .hero-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    display: inline-block;
+    transition: background 0.2s;
+  }
+  .hero-dot.active {
+    background: #fff;
+  }
+  @media (max-width: 768px) {
+    .hero-banner img { height: 320px; }
+    .hero-tagline { font-size: 1.25rem; }
+    .hero-content { padding-bottom: 2rem; }
+  }
+
+  /* ══════════════════════════════════════
+     NEW PRODUCTS SECTION
+     ══════════════════════════════════════ */
+  .newprod-section {
+    max-width: 1280px;
+    margin: 2rem auto 3rem;
+    padding: 0 1.5rem;
+  }
+
+  /* Header row */
+  .newprod-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .newprod-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  /* Filter tabs */
+  .newprod-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .newprod-tab {
+    padding: 0.38rem 1.1rem;
+    border-radius: 999px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .newprod-tab:hover {
+    border-color: #1e3a5f;
+    color: #1e3a5f;
+  }
+  .newprod-tab.active {
+    background: #1e3a5f;
+    border-color: #1e3a5f;
+    color: #fff;
+  }
+
+  /* Carousel wrapper */
+  .newprod-carousel-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .newprod-slider-clip {
+    overflow: hidden;
+    flex: 1;
+    border-radius: 10px;
+  }
+  .newprod-track {
+    display: flex;
+    transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+  .newprod-slide {
+    min-width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  /* Arrows */
+  .newprod-arrow {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+    color: #1e3a5f;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .newprod-arrow:hover {
+    background: #1e3a5f;
+    border-color: #1e3a5f;
+    color: #fff;
+  }
+
+  /* Dots */
+  .newprod-dots-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.25rem;
+  }
+  .newprod-dots {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+  }
+  .newprod-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: none;
+    background: #cbd5e1;
+    cursor: pointer;
+    transition: background 0.2s, width 0.2s, border-radius 0.2s;
+    padding: 0;
+  }
+  .newprod-dot.active {
+    background: #1e3a5f;
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  /* Empty state */
+  .newprod-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    font-size: 0.9rem;
+    color: #64748b;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .newprod-slide { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .newprod-slide { grid-template-columns: repeat(2, 1fr); }
+    .newprod-tabs  { gap: 0.35rem; }
+    .newprod-tab   { font-size: 0.72rem; padding: 0.3rem 0.8rem; }
+    .newprod-title { font-size: 1.2rem; }
+  }
+
+  /* ══════════════════════════════════════
+     CATEGORY BENTO SECTION
+     ══════════════════════════════════════ */
+  .cat-section {
+    margin-bottom: 3rem;
+  }
+
+  .cat-section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Bento grid: 3 cols, 2 rows ── */
+  .cat-bento {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 265px 265px;
+    gap: 14px;
+  }
+
+  /* Explicit cell placement */
+  .cat-card:nth-child(1) { grid-column: 1; grid-row: 1 / 3; } /* left  – tall */
+  .cat-card:nth-child(2) { grid-column: 2; grid-row: 1;     } /* mid   – top  */
+  .cat-card:nth-child(3) { grid-column: 2; grid-row: 2;     } /* mid   – bot  */
+  .cat-card:nth-child(4) { grid-column: 3; grid-row: 1 / 3; } /* right – tall */
+
+  /* ── Base card ── */
+  .cat-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    text-decoration: none;
+    display: block;
+    cursor: pointer;
+  }
+
+  /* ── Background image ── */
+  .cat-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.55s ease;
+    will-change: transform;
+  }
+  .cat-card:hover .cat-img {
+    transform: scale(1.07);
+  }
+
+  /* ── Dark gradient overlay ── */
+  .cat-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(8, 22, 42, 0.78) 0%,
+      rgba(8, 22, 42, 0.32) 45%,
+      rgba(8, 22, 42, 0.10) 100%
+    );
+    transition: background 0.35s ease;
+  }
+  .cat-card:hover .cat-overlay {
+    background: linear-gradient(
+      to top,
+      rgba(8, 22, 42, 0.88) 0%,
+      rgba(8, 22, 42, 0.48) 50%,
+      rgba(8, 22, 42, 0.20) 100%
+    );
+  }
+
+  /* ── Text content (bottom-left) ── */
+  .cat-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1.6rem 1.4rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .cat-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  }
+
+  .cat-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.80);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    transition: color 0.2s, gap 0.2s;
+  }
+  .cat-cta svg {
+    transition: transform 0.22s;
+    flex-shrink: 0;
+  }
+  .cat-card:hover .cat-cta {
+    color: #fff;
+    gap: 0.52rem;
+  }
+  .cat-card:hover .cat-cta svg {
+    transform: translateX(3px);
+  }
+
+  /* ── Mobile: single column, one under the other ── */
+  @media (max-width: 768px) {
+    .cat-bento {
+      grid-template-columns: 1fr;
+      grid-template-rows: none;
+      gap: 12px;
+    }
+    .cat-card:nth-child(1),
+    .cat-card:nth-child(2),
+    .cat-card:nth-child(3),
+    .cat-card:nth-child(4) {
+      grid-column: auto;
+      grid-row: auto;
+      height: 230px;
+    }
+    .cat-name {
+      font-size: 1.15rem;
+    }
+  }
+
+  /* ══════════════════════════════════════
+     PRODUCTS HEADING & GRID
+     ══════════════════════════════════════ */
+  h1 {
+    margin-bottom: 1.5rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* ── Card ── */
+  .card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #e8edf3;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(30, 58, 95, 0.12);
+  }
+
+  /* ── Image area ── */
+  .card-img-wrap {
+    background: #f8fafc;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+  }
+  .card-img-wrap img {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    padding: 0.75rem;
+    display: block;
+    transition: transform 0.3s;
+  }
+  .card:hover .card-img-wrap img {
+    transform: scale(1.04);
+  }
+  .card-img-placeholder {
+    width: 100%;
+    height: 180px;
+    background: #e8edf3;
+  }
+
+  /* ── Info ── */
+  .info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0.85rem 1rem 1rem;
+    border-top: 1px solid #f0f4f8;
+  }
+  .card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.4;
+    margin: 0 0 0.35rem 0;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .price {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 0 0 0.75rem 0;
+  }
+
+  /* ── CTA ── */
+  .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    transition: color 0.15s, gap 0.15s;
+  }
+  .card:hover .card-cta {
+    color: #2d5a8e;
+    gap: 0.5rem;
+  }
+
+  /* ══════════════════════════════════════
+     ORTHOPAEDIC SHOWCASE
+     ══════════════════════════════════════ */
+  .ortho-section {
+    display: grid;
+    grid-template-columns: 50% 50%;
+    gap: 0;
+    margin-bottom: 3rem;
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 32px rgba(30, 58, 95, 0.08);
+    border: 1px solid #e8edf3;
+  }
+
+  /* ── Left: human panel ── */
+  .ortho-left {
+    display: flex;
+    align-items: stretch;
+    min-height: 624px;
+    /* overflow now on .body-map-wrap */
+  }
+  .human-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  /* ── Body map wrapper ── */
+  .body-map-wrap {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* ── Overlay ── */
+  .body-map-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* ── Individual dot ── */
+  .body-dot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    z-index: 10;
+    cursor: default;
+  }
+  .body-dot::before {
+    content: "";
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.35), 0 2px 8px rgba(37,99,235,0.3);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    animation: dot-pulse 2.8s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
+  }
+  @keyframes dot-pulse {
+    0%,100% { box-shadow: 0 0 0 2px rgba(37,99,235,0.35), 0 2px 8px rgba(37,99,235,0.3); }
+    50%      { box-shadow: 0 0 0 7px rgba(37,99,235,0.12), 0 2px 14px rgba(37,99,235,0.45); }
+  }
+  .body-dot:hover::before {
+    transform: scale(1.5);
+    box-shadow: 0 0 0 5px rgba(37,99,235,0.2), 0 4px 16px rgba(37,99,235,0.5);
+    animation-play-state: paused;
+  }
+
+  /* ── Tooltip ── */
+  .dot-label {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: rgba(15,23,42,0.9);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 0.28rem 0.65rem;
+    border-radius: 5px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    z-index: 20;
+  }
+  .dot-label::after {
+    content: "";
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(15,23,42,0.9);
+  }
+  .body-dot:hover .dot-label {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Selected dot — orange ring ── */
+  .body-dot.dot-selected::before {
+    background: #f97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.35), 0 2px 12px rgba(249,115,22,0.45);
+    animation-play-state: paused;
+    transform: scale(1.4);
+  }
+
+  /* ── No-products fallback slide ── */
+  .ortho-no-products {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    font-size: 0.9rem;
+    color: #64748b;
+    grid-column: 1 / -1;
+  }
+  .ortho-no-products a { color: #2563eb; text-decoration: underline; }
+
+  /* Stagger pulse animation across all 20 dots */
+  .body-dot:nth-child(1)  { --d: 0s    } .body-dot:nth-child(2)  { --d: 0.14s }
+  .body-dot:nth-child(3)  { --d: 0.28s } .body-dot:nth-child(4)  { --d: 0.42s }
+  .body-dot:nth-child(5)  { --d: 0.56s } .body-dot:nth-child(6)  { --d: 0.70s }
+  .body-dot:nth-child(7)  { --d: 0.84s } .body-dot:nth-child(8)  { --d: 0.98s }
+  .body-dot:nth-child(9)  { --d: 1.12s } .body-dot:nth-child(10) { --d: 1.26s }
+  .body-dot:nth-child(11) { --d: 1.40s } .body-dot:nth-child(12) { --d: 1.54s }
+  .body-dot:nth-child(13) { --d: 1.68s } .body-dot:nth-child(14) { --d: 1.82s }
+  .body-dot:nth-child(15) { --d: 1.96s } .body-dot:nth-child(16) { --d: 2.10s }
+  .body-dot:nth-child(17) { --d: 2.24s } .body-dot:nth-child(18) { --d: 2.38s }
+  .body-dot:nth-child(19) { --d: 2.52s } .body-dot:nth-child(20) { --d: 2.66s }
+
+  /* ── Right panel ── */
+  .ortho-right {
+    padding: 1.75rem 1.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  /* Header */
+  .ortho-header {}
+  .ortho-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.01em;
+  }
+  .ortho-subtitle {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  /* ── Slider ── */
+  .ortho-slider-wrap {
+    overflow: hidden;
+    border-radius: 10px;
+    flex: 1;
+  }
+  .ortho-track {
+    display: flex;
+    transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+  .ortho-slide {
+    min-width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  /* ── Product card ── */
+  .ortho-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .ortho-card:hover {
+    box-shadow: 0 8px 24px rgba(30, 58, 95, 0.12);
+    transform: translateY(-2px);
+  }
+  .ortho-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    z-index: 1;
+  }
+  .ortho-card-img {
+    background: #f8fafc;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .ortho-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 0.5rem;
+    transition: transform 0.3s;
+  }
+  .ortho-card:hover .ortho-card-img img {
+    transform: scale(1.05);
+  }
+  .ortho-card-no-img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #e8edf3;
+  }
+  .ortho-card-body {
+    padding: 0.65rem 0.75rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+  }
+  .ortho-card-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+  .ortho-price-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+  .ortho-compare {
+    font-size: 0.7rem;
+    color: #9ca3af;
+  }
+  .ortho-price {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+  .ortho-price.sale {
+    color: #dc2626;
+  }
+  .ortho-avail {
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
+  .ortho-avail.in  { color: #16a34a; }
+  .ortho-avail.out { color: #9ca3af; }
+
+  /* ── Controls ── */
+  .ortho-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  .ortho-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid #d1d5db;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .ortho-arrow:hover {
+    border-color: #1e3a5f;
+    background: #1e3a5f;
+    color: #fff;
+  }
+  .ortho-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ortho-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: none;
+    background: #d1d5db;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .ortho-dot.active {
+    background: #1e3a5f;
+    transform: scale(1.35);
+  }
+
+  /* ── Banner ── */
+  .ortho-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #3b82f6 100%);
+    border-radius: 12px;
+    padding: 1.1rem 1.4rem;
+    flex-shrink: 0;
+  }
+  .ortho-banner-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.65);
+    margin: 0 0 0.2rem;
+  }
+  .ortho-banner-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.2rem;
+  }
+  .ortho-banner-sub {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.7);
+    margin: 0;
+  }
+  .ortho-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+    background: #fff;
+    color: #1e3a5f;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.6rem 1.1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .ortho-banner-btn:hover {
+    background: #eff6ff;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .ortho-section {
+      grid-template-columns: 1fr;
+    }
+    .ortho-left {
+      display: none;
+    }
+  }
+  @media (max-width: 600px) {
+    .ortho-slide {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .ortho-banner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

@@ -1,0 +1,995 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import {
+  getAllProducts,
+  getProductByHandle,
+  getCollectionWithProducts,
+  PRODUCT_QUERY,
+} from "../../lib/shopify";
+
+export async function getStaticPaths() {
+  const products = await getAllProducts();
+  return products.map((p: any) => ({ params: { handle: p.handle } }));
+}
+
+const { handle } = Astro.params;
+const product = await getProductByHandle(handle!);
+
+if (!product) return Astro.redirect("/404");
+
+// Strip Shopify-injected <script> tags
+const cleanDescription =
+  product.descriptionHtml?.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    ""
+  ) ?? "";
+
+const images: any[] = product.images.nodes;
+const firstVariant = product.variants.nodes[0];
+const hasMultipleImages = images.length > 1;
+const hasMultipleVariants = product.variants.nodes.length > 1;
+
+// Sale logic — use first variant compare price
+const price = parseFloat(firstVariant?.price?.amount ?? "0");
+const compareAt = parseFloat(firstVariant?.compareAtPrice?.amount ?? "0");
+const isSale = compareAt > 0 && compareAt > price;
+const currencyCode = firstVariant?.price?.currencyCode ?? "EUR";
+
+// SKU
+const sku = firstVariant?.sku ?? "";
+
+// Availability
+const isAvailable = firstVariant?.availableForSale ?? false;
+
+// Related products — from the same collection
+const collectionHandle = (product as any).collections?.nodes[0]?.handle ?? null;
+const collectionTitle = (product as any).collections?.nodes[0]?.title ?? "Related Products";
+const { products: relatedRaw } = collectionHandle
+  ? await getCollectionWithProducts(collectionHandle)
+  : { products: [] };
+const relatedProducts = (relatedRaw as any[])
+  .filter((p: any) => p.handle !== handle)
+  .slice(0, 8);
+---
+
+<Layout
+  title={product.title}
+  swrData={{
+    query: PRODUCT_QUERY,
+    variables: { handle },
+    data: product,
+    extract: "product",
+  }}
+>
+  <a href="/" class="back">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+    </svg>
+    Back to products
+  </a>
+
+  <div class={"product" + (hasMultipleImages ? "" : " no-thumbs")} id="swr-target" data-swr-type="detail">
+
+    <!-- ── Column 1: Thumbnail strip (only if 2+ images) ── -->
+    {hasMultipleImages && (
+      <div class="thumb-col">
+        <div class="thumb-list" id="thumb-list">
+          {images.map((img: any, i: number) => (
+            <button
+              type="button"
+              class={"thumb-btn" + (i === 0 ? " active" : "")}
+              data-src={img.url}
+              data-alt={img.altText || product.title}
+              aria-label={`View image ${i + 1}`}
+            >
+              <img src={img.url} alt={img.altText || product.title} />
+            </button>
+          ))}
+        </div>
+        <div class="thumb-arrows">
+          <button type="button" class="thumb-arrow" id="thumb-up" aria-label="Scroll up">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+            </svg>
+          </button>
+          <button type="button" class="thumb-arrow" id="thumb-down" aria-label="Scroll down">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    )}
+
+    <!-- ── Column 2: Main image ── -->
+    <div class="main-image-col">
+      {isSale && <span class="sale-badge">Sale</span>}
+      <img
+        id="main-image"
+        src={images[0]?.url}
+        alt={images[0]?.altText || product.title}
+        class="main-image"
+      />
+    </div>
+
+    <!-- ── Column 3: Product details ── -->
+    <div class="details">
+      <h1 class="product-title">{product.title}</h1>
+
+      {sku && (
+        <p class="product-sku">Product code: <span>{sku}</span></p>
+      )}
+
+      <div class={"availability-badge" + (isAvailable ? " in-stock" : " out-of-stock")}>
+        {isAvailable ? (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            In Stock
+          </>
+        ) : (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+            Out of Stock
+          </>
+        )}
+      </div>
+
+      <!-- Price -->
+      <div class="price-block">
+        {isSale ? (
+          <>
+            <span class="price-compare">{currencyCode} {compareAt.toFixed(2)}</span>
+            <span class="price-sale" id="variant-price">{currencyCode} {price.toFixed(2)}</span>
+          </>
+        ) : (
+          <span class="price-regular" id="variant-price">
+            {currencyCode} {price.toFixed(2)}
+          </span>
+        )}
+      </div>
+
+      <!-- Description -->
+      {cleanDescription && (
+        <div class="desc-wrap">
+          <div class="desc-clip" id="desc-clip">
+            <div class="description" id="desc-body" set:html={cleanDescription} />
+          </div>
+          <button type="button" class="desc-toggle" id="desc-toggle" aria-expanded="false">
+            Read more
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="13" height="13" class="desc-toggle-icon">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      <!-- Variant selector (dropdown) -->
+      {hasMultipleVariants && (
+        <div class="variant-selector">
+          <label class="variant-label" for="variant-select">Size</label>
+          <div class="variant-select-wrap">
+            <select id="variant-select" class="variant-select">
+              {product.variants.nodes.map((v: any) => (
+                <option
+                  value={v.id}
+                  data-price={v.price.amount}
+                  data-compare={v.compareAtPrice?.amount ?? "0"}
+                  data-currency={v.price.currencyCode}
+                  data-available={v.availableForSale ? "true" : "false"}
+                  disabled={!v.availableForSale}
+                >
+                  {v.title}{!v.availableForSale ? " (Sold Out)" : ""}
+                </option>
+              ))}
+            </select>
+            <svg class="variant-select-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      <!-- Quantity + Add to Cart -->
+      <div class="buy-row">
+        <div class="qty-selector">
+          <button type="button" class="qty-btn" id="qty-minus" aria-label="Decrease quantity">−</button>
+          <span class="qty-display" id="qty-display">1</span>
+          <button type="button" class="qty-btn" id="qty-plus" aria-label="Increase quantity">+</button>
+        </div>
+
+        <button
+          type="button"
+          class="add-to-cart-btn"
+          id="add-to-cart"
+          data-variant-id={firstVariant?.id}
+          disabled={!isAvailable}
+        >
+          {isAvailable ? "Add to Cart" : "Sold Out"}
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Related Products ── -->
+  {relatedProducts.length > 0 && (
+    <section class="related">
+      <div class="related-header">
+        <h2 class="related-title">More from {collectionTitle}</h2>
+        <div class="related-arrows">
+          <button type="button" class="rel-arrow" id="rel-prev" aria-label="Previous products">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <button type="button" class="rel-arrow" id="rel-next" aria-label="Next products">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="related-track-wrap">
+        <div class="related-track" id="related-track">
+          {relatedProducts.map((p: any) => (
+            <a class="rel-card" href={`/products/${p.handle}`}>
+              <div class="rel-card-img-wrap">
+                {p.featuredImage ? (
+                  <img
+                    src={p.featuredImage.url}
+                    alt={p.featuredImage.altText || p.title}
+                  />
+                ) : (
+                  <div class="rel-card-img-placeholder" />
+                )}
+              </div>
+              <div class="rel-info">
+                <h3 class="rel-card-title">{p.title}</h3>
+                <p class="rel-price">
+                  {p.priceRange.minVariantPrice.currencyCode}{" "}
+                  {parseFloat(p.priceRange.minVariantPrice.amount).toFixed(2)}
+                </p>
+                <div class="rel-card-cta">
+                  View Product
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="13" height="13">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Layout>
+
+<style>
+  /* ── Back link ── */
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
+    color: #1e3a5f;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .back:hover { color: #2563eb; }
+
+  /* ── 3-column product grid ── */
+  .product {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .product.no-thumbs {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  /* ── Thumbnail column ── */
+  .thumb-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .thumb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 420px;
+    overflow: hidden;
+  }
+  .thumb-btn {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    cursor: pointer;
+    padding: 0;
+    transition: border-color 0.15s;
+  }
+  .thumb-btn:hover { border-color: #93c5fd; }
+  .thumb-btn.active { border-color: #1e3a5f; }
+  .thumb-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .thumb-arrows {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+    margin-top: 0.25rem;
+  }
+  .thumb-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .thumb-arrow:hover {
+    background: #f0f4ff;
+    border-color: #1e3a5f;
+    color: #1e3a5f;
+  }
+
+  /* ── Main image column ── */
+  .main-image-col {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    min-width: 0;
+  }
+  .main-image {
+    width: 100%;
+    max-height: 520px;
+    object-fit: contain;
+    display: block;
+    padding: 1rem;
+  }
+  .sale-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.65rem;
+    border-radius: 20px;
+    z-index: 1;
+  }
+
+  /* ── Details column ── */
+  .details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 0;
+  }
+  .product-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.3;
+    margin: 0;
+  }
+  .product-sku {
+    font-size: 0.8rem;
+    color: #888;
+    margin: 0;
+  }
+  .product-sku span { color: #555; }
+
+  /* Availability */
+  .availability-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    width: fit-content;
+  }
+  .availability-badge.in-stock {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+  .availability-badge.out-of-stock {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  /* Price */
+  .price-block {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .price-regular {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+  .price-compare {
+    font-size: 1.1rem;
+    color: #9ca3af;
+    text-decoration: line-through;
+  }
+  .price-sale {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #dc2626;
+  }
+
+  /* Description collapsible wrapper */
+  .desc-wrap {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 0.75rem;
+  }
+
+  /* Clip container — JS sets max-height dynamically to match image column bottom */
+  .desc-clip {
+    position: relative;
+    overflow: hidden;
+    transition: max-height 0.45s ease;
+  }
+  /* Fade gradient sits at the bottom of the visible content */
+  .desc-clip::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5rem;
+    background: linear-gradient(to bottom, transparent, #fff);
+    pointer-events: none;
+    transition: opacity 0.35s;
+  }
+  .desc-clip.expanded::after {
+    opacity: 0;
+  }
+
+  .description {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #555;
+  }
+  .description :global(p) { margin-bottom: 0.5rem; }
+  .description :global(a) { color: #2563eb; }
+  .description :global(.desc-heading) {
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+    margin-top: 0.85rem;
+    margin-bottom: 0.2rem;
+  }
+  .description :global(.desc-line) { padding-left: 1rem; }
+  .description :global(.desc-spacer) { height: 0.4rem; }
+
+  /* Pill-shaped read more / show less button */
+  .desc-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+    background: #fff;
+    border: 1.5px solid #d1d5db;
+    border-radius: 20px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .desc-toggle:hover {
+    border-color: #1e3a5f;
+    background: #f0f4ff;
+  }
+  .desc-toggle-icon {
+    transition: transform 0.35s;
+    flex-shrink: 0;
+  }
+
+  /* Variant selector — dropdown */
+  .variant-selector { display: flex; flex-direction: column; gap: 0.4rem; }
+  .variant-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .variant-select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .variant-select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0.6rem 2.5rem 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #fff;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .variant-select:hover { border-color: #1e3a5f; }
+  .variant-select:focus {
+    border-color: #1e3a5f;
+    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+  }
+  .variant-select-chevron {
+    position: absolute;
+    right: 0.75rem;
+    pointer-events: none;
+    color: #666;
+  }
+
+  /* Buy row */
+  .buy-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+  }
+
+  /* Quantity selector */
+  .qty-selector {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .qty-btn {
+    width: 38px;
+    height: 44px;
+    font-size: 1.2rem;
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #333;
+    transition: background 0.15s;
+    font-family: inherit;
+  }
+  .qty-btn:hover { background: #f3f4f6; }
+  .qty-display {
+    min-width: 36px;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    border-left: 1.5px solid #d1d5db;
+    border-right: 1.5px solid #d1d5db;
+    padding: 0 0.5rem;
+    line-height: 44px;
+    display: block;
+  }
+
+  /* Add to Cart */
+  .add-to-cart-btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.75rem 1.5rem;
+    background: #1e3a5f;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+    height: 44px;
+  }
+  .add-to-cart-btn:hover:not(:disabled) { background: #2d5a8e; }
+  .add-to-cart-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+  .add-to-cart-btn.loading { opacity: 0.7; pointer-events: none; }
+
+  /* ── Related Products ── */
+  .related {
+    margin-top: 3rem;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 2rem;
+  }
+  .related-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .related-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+  }
+  .related-arrows { display: flex; gap: 0.5rem; }
+  .rel-arrow {
+    width: 38px;
+    height: 38px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e3a5f;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .rel-arrow:hover { background: #f0f4ff; border-color: #1e3a5f; }
+
+  .related-track-wrap { overflow: hidden; }
+  .related-track {
+    display: flex;
+    gap: 1.25rem;
+    transition: transform 0.35s ease;
+  }
+
+  /* Individual related card */
+  .rel-card {
+    flex: 0 0 220px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #e8edf3;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .rel-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(30, 58, 95, 0.12);
+  }
+  .rel-card-img-wrap {
+    background: #f8fafc;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+  }
+  .rel-card-img-wrap img {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    padding: 0.75rem;
+    display: block;
+    transition: transform 0.3s;
+  }
+  .rel-card:hover .rel-card-img-wrap img { transform: scale(1.04); }
+  .rel-card-img-placeholder { width: 100%; height: 180px; background: #e8edf3; }
+
+  .rel-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0.85rem 1rem 1rem;
+    border-top: 1px solid #f0f4f8;
+  }
+  .rel-card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.4;
+    margin: 0 0 0.35rem 0;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .rel-price {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 0 0 0.75rem 0;
+  }
+  .rel-card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    transition: color 0.15s, gap 0.15s;
+  }
+  .rel-card:hover .rel-card-cta { color: #2d5a8e; gap: 0.5rem; }
+
+  /* ── Mobile ── */
+  @media (max-width: 768px) {
+    .product {
+      grid-template-columns: 1fr;
+    }
+    .product.no-thumbs {
+      grid-template-columns: 1fr;
+    }
+    /* Thumbnails become horizontal strip on mobile */
+    .thumb-col {
+      flex-direction: row;
+      align-items: center;
+      order: 2;
+    }
+    .thumb-list {
+      flex-direction: row;
+      max-height: none;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .thumb-btn { width: 64px; height: 64px; flex-shrink: 0; }
+    .thumb-arrows { flex-direction: column; margin-top: 0; }
+    .main-image-col { order: 1; min-height: 260px; }
+    .details { order: 3; }
+    .add-to-cart-btn { min-width: 0; width: 100%; }
+    .buy-row { flex-direction: column; align-items: stretch; }
+    .qty-selector { justify-content: center; }
+  }
+</style>
+
+<script is:inline>
+(function () {
+  /* ── Description: detect ALL-CAPS headings and style them ── */
+  (function () {
+    var desc = document.querySelector(".description");
+    if (!desc) return;
+    var html = desc.innerHTML;
+    // Normalise <p> tags → newlines, then <br> → newlines
+    html = html.replace(/<\/p>/gi, "\n").replace(/<p[^>]*>/gi, "");
+    html = html.replace(/<br\s*\/?>/gi, "\n");
+    var lines = html.split("\n");
+    var out = "";
+    lines.forEach(function (line) {
+      var t = line.trim();
+      // Empty or non-breaking-space lines become spacers
+      if (!t || t === "&nbsp;") {
+        out += '<div class="desc-spacer"></div>';
+        return;
+      }
+      // ALL-CAPS line: has at least one uppercase letter and zero lowercase letters
+      var isHeading = /[A-Z]/.test(t) && !/[a-z]/.test(t);
+      out += isHeading
+        ? '<div class="desc-heading">' + t + "</div>"
+        : '<div class="desc-line">' + t + "</div>";
+    });
+    desc.innerHTML = out;
+  })();
+
+  /* ── Description read-more toggle ── */
+  /* Collapsed height is calculated so the Add-to-Cart row lands at the image bottom */
+  (function () {
+    var clip   = document.getElementById("desc-clip");
+    var toggle = document.getElementById("desc-toggle");
+    if (!clip || !toggle) return;
+
+    var MOBILE_FALLBACK = 12 * 16; // 192px — fallback on mobile / narrow screens
+
+    function init() {
+      var imageCol = document.querySelector(".main-image-col");
+      var buyRow   = document.querySelector(".buy-row");
+      var isMobile = !imageCol || window.innerWidth <= 768;
+
+      var targetH;
+      if (isMobile) {
+        targetH = MOBILE_FALLBACK;
+      } else {
+        // Measure while clip has no max-height (fully expanded) so positions are natural
+        var imgBottom      = imageCol.getBoundingClientRect().bottom;
+        var clipTop        = clip.getBoundingClientRect().top;
+        var clipNatBottom  = clip.getBoundingClientRect().bottom; // = clipTop + scrollHeight
+
+        // afterH = space needed below the clip for toggle + variant selector + buy row + gaps
+        var afterH = buyRow
+          ? buyRow.getBoundingClientRect().bottom - clipNatBottom
+          : toggle.offsetHeight + 14;
+
+        targetH = imgBottom - clipTop - afterH;
+        if (targetH < MOBILE_FALLBACK) targetH = MOBILE_FALLBACK;
+      }
+
+      // Content already fits — no need to clip
+      if (clip.scrollHeight <= targetH + 4) {
+        toggle.style.display = "none";
+        clip.style.overflow  = "visible";
+        return;
+      }
+
+      clip.style.maxHeight = targetH + "px";
+
+      var expanded  = false;
+      var labelNode = toggle.firstChild; // text node "Read more"
+      var iconEl    = toggle.querySelector(".desc-toggle-icon");
+
+      toggle.addEventListener("click", function () {
+        expanded = !expanded;
+        if (expanded) {
+          clip.style.maxHeight = clip.scrollHeight + "px";
+          clip.classList.add("expanded");
+        } else {
+          clip.style.maxHeight = targetH + "px"; // restore stored height
+          clip.classList.remove("expanded");
+          clip.parentElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+        if (labelNode && labelNode.nodeType === 3) {
+          labelNode.textContent = expanded ? "Show less" : "Read more";
+        }
+        if (iconEl) iconEl.style.transform = expanded ? "rotate(180deg)" : "rotate(0deg)";
+        toggle.setAttribute("aria-expanded", String(expanded));
+      });
+    }
+
+    // Wait for images to load so layout / getBoundingClientRect are fully settled
+    if (document.readyState === "complete") {
+      init();
+    } else {
+      window.addEventListener("load", init);
+    }
+  })();
+
+  /* ── Thumbnail gallery ── */
+  var mainImg = document.getElementById("main-image");
+  var thumbList = document.getElementById("thumb-list");
+  var thumbUp = document.getElementById("thumb-up");
+  var thumbDown = document.getElementById("thumb-down");
+  var thumbScrollPos = 0;
+  var THUMB_STEP = 88; // px per scroll step (thumb height + gap)
+
+  if (thumbList && mainImg) {
+    thumbList.addEventListener("click", function (e) {
+      var btn = e.target.closest(".thumb-btn");
+      if (!btn) return;
+      // Update active state
+      thumbList.querySelectorAll(".thumb-btn").forEach(function (b) {
+        b.classList.remove("active");
+      });
+      btn.classList.add("active");
+      // Swap main image
+      mainImg.src = btn.dataset.src;
+      mainImg.alt = btn.dataset.alt;
+    });
+  }
+
+  if (thumbUp && thumbList) {
+    thumbUp.addEventListener("click", function () {
+      thumbScrollPos = Math.max(0, thumbScrollPos - THUMB_STEP);
+      thumbList.style.transform = "translateY(-" + thumbScrollPos + "px)";
+    });
+  }
+  if (thumbDown && thumbList) {
+    thumbDown.addEventListener("click", function () {
+      var maxScroll = thumbList.scrollHeight - thumbList.parentElement.clientHeight + 60;
+      thumbScrollPos = Math.min(maxScroll, thumbScrollPos + THUMB_STEP);
+      thumbList.style.transform = "translateY(-" + thumbScrollPos + "px)";
+    });
+  }
+
+  /* ── Quantity selector ── */
+  var qtyDisplay = document.getElementById("qty-display");
+  var qtyMinus = document.getElementById("qty-minus");
+  var qtyPlus = document.getElementById("qty-plus");
+  var qty = 1;
+
+  if (qtyMinus && qtyPlus && qtyDisplay) {
+    qtyMinus.addEventListener("click", function () {
+      if (qty > 1) { qty--; qtyDisplay.textContent = qty; }
+    });
+    qtyPlus.addEventListener("click", function () {
+      qty++;
+      qtyDisplay.textContent = qty;
+    });
+  }
+
+  /* ── Variant selection (dropdown) ── */
+  var selectEl = document.getElementById("variant-select");
+  var addBtn = document.getElementById("add-to-cart");
+  var priceEl = document.getElementById("variant-price");
+
+  if (selectEl && addBtn) {
+    selectEl.addEventListener("change", function () {
+      var opt = selectEl.options[selectEl.selectedIndex];
+      var avail = opt.dataset.available === "true";
+
+      addBtn.dataset.variantId = selectEl.value;
+      addBtn.disabled = !avail;
+      addBtn.textContent = avail ? "Add to Cart" : "Sold Out";
+
+      if (priceEl) {
+        var newPrice = parseFloat(opt.dataset.price).toFixed(2);
+        var curr = opt.dataset.currency;
+        priceEl.textContent = curr + " " + newPrice;
+      }
+    });
+  }
+
+  /* ── Add to cart ── */
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      if (addBtn.disabled || addBtn.classList.contains("loading")) return;
+      var variantId = addBtn.dataset.variantId;
+      if (!variantId) return;
+
+      var currentQty = qty || 1;
+      addBtn.classList.add("loading");
+      var origText = addBtn.textContent;
+      addBtn.textContent = "Adding…";
+
+      Cart.addToCart(variantId, currentQty)
+        .then(function () {
+          addBtn.textContent = "Added!";
+          setTimeout(function () {
+            addBtn.textContent = origText;
+            addBtn.classList.remove("loading");
+          }, 1200);
+        })
+        .catch(function (err) {
+          console.error("Add to cart failed:", err);
+          addBtn.textContent = "Error – try again";
+          addBtn.classList.remove("loading");
+          setTimeout(function () {
+            addBtn.textContent = origText;
+          }, 2000);
+        });
+    });
+  }
+  /* ── Related products carousel ── */
+  var relTrack = document.getElementById("related-track");
+  var relPrev = document.getElementById("rel-prev");
+  var relNext = document.getElementById("rel-next");
+  if (relTrack && relPrev && relNext) {
+    var CARD_W = 220 + 20; // card width (220px) + gap (1.25rem ≈ 20px)
+    var relOffset = 0;
+    var getRelMax = function () {
+      return Math.max(0, relTrack.scrollWidth - relTrack.parentElement.clientWidth);
+    };
+    relPrev.addEventListener("click", function () {
+      relOffset = Math.max(0, relOffset - CARD_W * 2);
+      relTrack.style.transform = "translateX(-" + relOffset + "px)";
+    });
+    relNext.addEventListener("click", function () {
+      relOffset = Math.min(getRelMax(), relOffset + CARD_W * 2);
+      relTrack.style.transform = "translateX(-" + relOffset + "px)";
+    });
+  }
+})();
+</script>

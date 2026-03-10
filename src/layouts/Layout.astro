@@ -1,0 +1,1967 @@
+---
+import { shopifyConfig, getOverlayProducts, getCollectionPreview } from "../lib/shopify";
+import { NAV_CATEGORIES } from "../lib/menuConfig";
+
+interface Props {
+  title: string;
+  swrData?: {
+    query: string;
+    variables: Record<string, unknown>;
+    data: unknown;
+    extract: string;
+  };
+}
+const { title, swrData } = Astro.props;
+
+// ── Search overlay data ────────────────────────────────────────────────────
+const overlayAllProducts = await getOverlayProducts(20);
+const wheelchairPreview  = await getCollectionPreview("wheelchairs-and-home-care-aids", 3);
+
+// Section splits
+const newProducts     = overlayAllProducts.slice(0, 3);
+const popularProducts = overlayAllProducts.slice(3, 6);
+
+const saleProducts = overlayAllProducts
+  .filter((p: any) => {
+    const v = p.variants?.nodes?.[0];
+    if (!v?.compareAtPrice) return false;
+    const price   = parseFloat(v.price?.amount ?? "0");
+    const compare = parseFloat(v.compareAtPrice?.amount ?? "0");
+    return compare > 0 && compare > price;
+  })
+  .slice(0, 3);
+
+// Fallback when nothing is on sale
+const saleProductsFinal = saleProducts.length > 0 ? saleProducts : overlayAllProducts.slice(6, 9);
+const saleColTitle      = saleProducts.length > 0 ? "On Sale"    : "Featured";
+
+const wheelchairProducts =
+  wheelchairPreview.length > 0 ? wheelchairPreview : overlayAllProducts.slice(9, 12);
+
+// Helper: extract price / sale / availability data from a raw Shopify product node
+function pdp(p: any) {
+  const v        = p.variants?.nodes?.[0];
+  const price    = parseFloat(v?.price?.amount ?? p.priceRange?.minVariantPrice?.amount ?? "0");
+  const compareAt= parseFloat(v?.compareAtPrice?.amount ?? "0");
+  const currency = v?.price?.currencyCode ?? p.priceRange?.minVariantPrice?.currencyCode ?? "EUR";
+  const isAvail  = v?.availableForSale ?? true;
+  const isSale   = compareAt > 0 && compareAt > price;
+  return { price, compareAt, currency, isAvail, isSale };
+}
+
+// Compact JSON embedded for client-side live search
+const sovSearchData = JSON.stringify(
+  overlayAllProducts.map((p: any) => {
+    const d = pdp(p);
+    return {
+      t:  p.title,
+      h:  p.handle,
+      p:  d.price,
+      c:  d.isSale ? d.compareAt : 0,
+      cu: d.currency,
+      a:  d.isAvail,
+      i:  p.featuredImage?.url ?? "",
+    };
+  })
+);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header>
+      <!-- ROW 1: White top bar — logo, search, lang, profile, cart -->
+      <div class="top-bar">
+        <div class="top-bar-inner">
+          <!-- Left group: Logo + Pages menu -->
+          <div class="top-bar-left">
+            <a href="/" class="nav-logo">
+              <img src="https://orthohouse.com.cy/cdn/shop/files/logo_website.png?v=1767804500&width=240" alt="OrthoHouse Cyprus" class="nav-logo-img" />
+            </a>
+
+            <!-- Pages menu (hamburger + "Menu" label) — right of logo -->
+            <div class="pages-menu" id="pages-menu">
+              <button type="button" class="pages-menu-btn" id="pages-menu-btn" aria-expanded="false" aria-controls="pages-menu-dropdown">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+                <span>Menu</span>
+              </button>
+              <div class="pages-menu-dropdown" id="pages-menu-dropdown">
+                <!-- ── Product Categories ── -->
+                <span class="pages-menu-section">Categories</span>
+                <a href="/collections/orthopedic-braces-supports" class="pages-menu-link">Orthopaedics</a>
+                <a href="/collections/walking-aids" class="pages-menu-link">Walking Aids</a>
+                <a href="/collections/wheelchairs-and-home-care-aids" class="pages-menu-link">Wheelchairs &amp; Home Care</a>
+                <a href="/collections/exercise-and-well-being" class="pages-menu-link">Comfort &amp; Well Being</a>
+                <a href="/collections/kybun-shoes" class="pages-menu-link">Kybun Shoes</a>
+
+                <hr class="pages-menu-divider" />
+
+                <!-- ── Pages ── -->
+                <span class="pages-menu-section">Pages</span>
+                <a href="/" class="pages-menu-link">Home</a>
+                <a href="/pages/about-us" class="pages-menu-link">About Us</a>
+                <a href="/pages/working-hours" class="pages-menu-link">Working Hours</a>
+                <a href="/pages/shipping-delivery" class="pages-menu-link">Shipping &amp; Delivery</a>
+                <a href="/pages/refund-cancellation-policy" class="pages-menu-link">Refund &amp; Cancellation Policy</a>
+                <a href="/pages/cookies-policy" class="pages-menu-link">Cookies Policy</a>
+                <a href="/pages/terms-and-conditions" class="pages-menu-link">Terms &amp; Conditions</a>
+                <a href="/pages/terms-of-service" class="pages-menu-link">Terms of Service</a>
+                <a href="/pages/legal-notice" class="pages-menu-link">Legal Notice</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search bar -->
+          <div class="top-search" id="top-search">
+            <svg class="top-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+            <input type="text" class="top-search-input" placeholder="Search products..." aria-label="Search products" />
+          </div>
+
+          <div class="top-bar-right">
+            <!-- Language switcher -->
+            <button type="button" class="top-lang-btn" aria-label="Switch language" data-action="lang-switch">
+              <span class="lang-active">EN</span>
+              <span class="lang-sep">/</span>
+              <span class="lang-inactive">GR</span>
+            </button>
+
+            <!-- Profile icon -->
+            <a href="/account" class="top-icon-btn top-profile" aria-label="Account">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+            </a>
+
+            <!-- Cart -->
+            <a href="/cart" class="top-icon-btn cart-link" aria-label="Shopping cart">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+              </svg>
+              <span id="cart-badge" class="cart-badge" style="display:none">0</span>
+            </a>
+
+            <!-- Search icon (mobile only) -->
+            <button type="button" class="top-icon-btn mobile-search-btn" id="mobile-search-btn" aria-label="Search">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+            </button>
+
+            <!-- Hamburger (mobile only) -->
+            <button type="button" class="top-icon-btn hamburger-btn" id="hamburger-btn" aria-label="Open menu">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="22" height="22">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Dark blue category bar -->
+      <nav class="cat-bar" id="cat-bar">
+        <div class="cat-bar-inner">
+          {NAV_CATEGORIES.map((cat, i) => (
+            <div class="cat-item" data-index={i}>
+              {cat.children.length > 0 ? (
+                <button
+                  type="button"
+                  class="cat-trigger"
+                  aria-expanded="false"
+                  aria-controls={`mega-panel-${i}`}
+                >
+                  {cat.label}
+                  <svg class="cat-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="15" height="15">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
+              ) : (
+                <a href={`/collections/${cat.handle}`} class="cat-trigger">
+                  {cat.label}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <!-- Mega panels (positioned relative to header) -->
+        {NAV_CATEGORIES.map((cat, i) => (
+          cat.children.length > 0 && (
+            <div
+              class="mega-panel"
+              id={`mega-panel-${i}`}
+              data-panel-index={i}
+              role="region"
+              aria-label={`${cat.label} subcategories`}
+            >
+              <div class="mega-inner">
+                <div class="mega-grid">
+                  {cat.children.map((sub) => (
+                    <a href={`/collections/${sub.handle}`} class="mega-link">
+                      {sub.label}
+                    </a>
+                  ))}
+                </div>
+                <a href={`/collections/${cat.handle}`} class="mega-view-all">
+                  View all {cat.label} &rarr;
+                </a>
+              </div>
+            </div>
+          )
+        ))}
+      </nav>
+    </header>
+
+    <!-- ══════════════════════════════════════
+         SEARCH OVERLAY (bottom sheet)
+         ══════════════════════════════════════ -->
+    <div class="sov-backdrop" id="sov-backdrop" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="sov-panel" id="sov-panel">
+        <div class="sov-inner">
+
+          <!-- ── Search input row ── -->
+          <div class="sov-head">
+            <div class="sov-input-wrap">
+              <svg class="sov-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+              <input
+                id="sov-input"
+                type="text"
+                class="sov-input"
+                placeholder="Search here..."
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+              />
+            </div>
+            <button type="button" class="sov-close" id="sov-close" aria-label="Close search">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- ── Quick-search pills ── -->
+          <div class="sov-pills">
+            <button type="button" class="sov-pill" data-q="wheelchair">Wheelchair</button>
+            <button type="button" class="sov-pill" data-q="hospital bed">Hospital Bed</button>
+            <button type="button" class="sov-pill" data-q="brace">Brace</button>
+            <button type="button" class="sov-pill" data-q="pillow">Pillow</button>
+          </div>
+
+          <!-- ── Hint text ── -->
+          <p class="sov-hint" id="sov-hint">Start typing to see the products you're looking for.</p>
+
+          <!-- ── Featured sections (shown when input is empty) ── -->
+          <div class="sov-featured" id="sov-featured">
+            <div class="sov-cols">
+
+              <!-- Col 1 · New Products -->
+              <div class="sov-col">
+                <h3 class="sov-col-title">New Products</h3>
+                {newProducts.map((p: any) => {
+                  const d = pdp(p);
+                  return (
+                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                      <div class="sov-prod-thumb">
+                        {p.featuredImage
+                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          : <div class="sov-prod-no-img" />}
+                      </div>
+                      <div class="sov-prod-info">
+                        <p class="sov-prod-name">{p.title}</p>
+                        <div class="sov-price-row">
+                          {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
+                          <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
+                        </div>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+
+              <!-- Col 2 · Popular Products -->
+              <div class="sov-col">
+                <h3 class="sov-col-title">Popular Products</h3>
+                {popularProducts.map((p: any) => {
+                  const d = pdp(p);
+                  return (
+                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                      <div class="sov-prod-thumb">
+                        {p.featuredImage
+                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          : <div class="sov-prod-no-img" />}
+                      </div>
+                      <div class="sov-prod-info">
+                        <p class="sov-prod-name">{p.title}</p>
+                        <div class="sov-price-row">
+                          {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
+                          <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
+                        </div>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+
+              <!-- Col 3 · On Sale / Featured -->
+              <div class="sov-col">
+                <h3 class="sov-col-title">{saleColTitle}</h3>
+                {saleProductsFinal.map((p: any) => {
+                  const d = pdp(p);
+                  return (
+                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                      <div class="sov-prod-thumb">
+                        {p.featuredImage
+                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          : <div class="sov-prod-no-img" />}
+                      </div>
+                      <div class="sov-prod-info">
+                        <p class="sov-prod-name">{p.title}</p>
+                        <div class="sov-price-row">
+                          {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
+                          <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
+                        </div>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+
+              <!-- Col 4 · Wheelchairs & Home Care -->
+              <div class="sov-col">
+                <h3 class="sov-col-title">Wheelchairs &amp; Home Care</h3>
+                {wheelchairProducts.map((p: any) => {
+                  const d = pdp(p);
+                  return (
+                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                      <div class="sov-prod-thumb">
+                        {p.featuredImage
+                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          : <div class="sov-prod-no-img" />}
+                      </div>
+                      <div class="sov-prod-info">
+                        <p class="sov-prod-name">{p.title}</p>
+                        <div class="sov-price-row">
+                          {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
+                          <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
+                        </div>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+
+            </div><!-- /sov-cols -->
+          </div><!-- /sov-featured -->
+
+          <!-- ── Live search results (shown when typing) ── -->
+          <div class="sov-results" id="sov-results" style="display:none">
+            <div class="sov-results-grid" id="sov-results-grid"></div>
+            <a id="sov-see-all" href="/search" class="sov-see-all" style="display:none">
+              See all results for &ldquo;<span id="sov-query-label"></span>&rdquo; &rarr;
+            </a>
+          </div>
+
+        </div><!-- /sov-inner -->
+      </div><!-- /sov-panel -->
+    </div><!-- /sov-backdrop -->
+
+    <!-- Embedded product data for JS live search -->
+    <script id="sov-search-data" type="application/json" set:html={sovSearchData} />
+
+    <!-- Side drawer overlay -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+
+    <!-- Left side-drawer -->
+    <div class="mobile-drawer" id="mobile-drawer" role="dialog" aria-modal="true" aria-label="Site navigation">
+
+      <!-- Scrollable nav body -->
+      <nav class="drawer-nav">
+
+        <!-- ── Shop / Categories ── -->
+        <p class="drawer-section-label">Shop</p>
+
+        {NAV_CATEGORIES.map((cat, i) => (
+          <div class="drawer-cat-item">
+            {cat.children.length > 0 ? (
+              <button type="button" class="drawer-trigger" data-drawer-index={i}>
+                <span>{cat.label}</span>
+                <svg class="drawer-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="15" height="15">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+            ) : (
+              <a href={`/collections/${cat.handle}`} class="drawer-trigger">
+                <span>{cat.label}</span>
+              </a>
+            )}
+            {cat.children.length > 0 && (
+              <div class="drawer-children" id={`drawer-children-${i}`}>
+                {cat.children.map((sub) => (
+                  <a href={`/collections/${sub.handle}`} class="drawer-sub-link">
+                    {sub.label}
+                  </a>
+                ))}
+                <a href={`/collections/${cat.handle}`} class="drawer-sub-link drawer-view-all">
+                  View all {cat.label} &rarr;
+                </a>
+              </div>
+            )}
+          </div>
+        ))}
+
+        <!-- ── Thick divider ── -->
+        <div class="drawer-band"></div>
+
+        <!-- ── Information / Pages ── -->
+        <p class="drawer-section-label">Information</p>
+
+        <a href="/" class="drawer-page-link">Home</a>
+        <a href="/pages/about-us" class="drawer-page-link">About Us</a>
+        <a href="/pages/working-hours" class="drawer-page-link">Working Hours</a>
+        <a href="/pages/shipping-delivery" class="drawer-page-link">Shipping &amp; Delivery</a>
+        <a href="/pages/refund-cancellation-policy" class="drawer-page-link">Refund &amp; Cancellation Policy</a>
+        <a href="/pages/cookies-policy" class="drawer-page-link">Cookies Policy</a>
+        <a href="/pages/terms-and-conditions" class="drawer-page-link">Terms &amp; Conditions</a>
+        <a href="/pages/terms-of-service" class="drawer-page-link">Terms of Service</a>
+        <a href="/pages/legal-notice" class="drawer-page-link">Legal Notice</a>
+
+      </nav>
+
+      <!-- Footer: account + lang -->
+      <div class="drawer-footer">
+        <a href="/account" class="drawer-footer-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+          </svg>
+          My Account
+        </a>
+        <div class="drawer-lang">
+          <span class="lang-active">EN</span>
+          <span class="lang-sep">/</span>
+          <span class="lang-inactive">GR</span>
+        </div>
+      </div>
+
+    </div>
+
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="footer-main">
+        <div class="footer-inner">
+          <!-- Column 1: Contact -->
+          <div class="footer-col">
+            <h3 class="footer-heading">Contact</h3>
+            <ul class="footer-list">
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>
+                Limassol, Cyprus
+              </li>
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
+                <a href="tel:+35725123456">+357 25 123 456</a>
+              </li>
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+                <a href="mailto:info@orthohouse.com.cy">info@orthohouse.com.cy</a>
+              </li>
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                Mon – Fri: 9:00 – 18:00
+              </li>
+            </ul>
+          </div>
+
+          <!-- Column 2: Pages -->
+          <div class="footer-col">
+            <h3 class="footer-heading">Pages</h3>
+            <ul class="footer-list">
+              <li><a href="/pages/about-us">About Us</a></li>
+              <li><a href="/pages/working-hours">Working Hours</a></li>
+              <li><a href="/pages/shipping-delivery">Shipping & Delivery</a></li>
+              <li><a href="/pages/refund-cancellation-policy">Refund & Cancellation Policy</a></li>
+              <li><a href="/pages/cookies-policy">Cookies Policy</a></li>
+              <li><a href="/pages/terms-and-conditions">Terms & Conditions</a></li>
+              <li><a href="/pages/terms-of-service">Terms of Service</a></li>
+              <li><a href="/pages/legal-notice">Legal Notice</a></li>
+            </ul>
+          </div>
+
+          <!-- Column 3: Secure Payments -->
+          <div class="footer-col">
+            <h3 class="footer-heading">Secure Payments</h3>
+
+            <!-- Payment icons -->
+            <div class="payment-icons">
+
+              <!-- Visa -->
+              <span class="payment-icon" aria-label="Visa">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="24">
+                  <rect width="48" height="48" rx="6" fill="#1a1f71"/>
+                  <text x="24" y="32" text-anchor="middle" font-size="18" font-weight="900" font-family="Arial,sans-serif" fill="#fff" letter-spacing="-1">VISA</text>
+                </svg>
+              </span>
+
+              <!-- Mastercard -->
+              <span class="payment-icon" aria-label="Mastercard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="24">
+                  <rect width="48" height="48" rx="6" fill="#252525"/>
+                  <circle cx="18" cy="24" r="10" fill="#eb001b"/>
+                  <circle cx="30" cy="24" r="10" fill="#f79e1b"/>
+                  <path d="M24 16.3a10 10 0 0 1 0 15.4A10 10 0 0 1 24 16.3z" fill="#ff5f00"/>
+                </svg>
+              </span>
+
+              <!-- PayPal -->
+              <span class="payment-icon" aria-label="PayPal">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="24">
+                  <rect width="48" height="48" rx="6" fill="#003087"/>
+                  <text x="24" y="30" text-anchor="middle" font-size="13" font-weight="800" font-family="Arial,sans-serif" fill="#fff">PayPal</text>
+                </svg>
+              </span>
+
+              <!-- Apple Pay -->
+              <span class="payment-icon" aria-label="Apple Pay">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="24">
+                  <rect width="48" height="48" rx="6" fill="#000"/>
+                  <text x="24" y="30" text-anchor="middle" font-size="11" font-weight="700" font-family="-apple-system,Arial,sans-serif" fill="#fff"> Pay</text>
+                  <text x="15" y="30" text-anchor="middle" font-size="14" font-family="-apple-system,Arial,sans-serif" fill="#fff"></text>
+                </svg>
+              </span>
+
+              <!-- Google Pay -->
+              <span class="payment-icon" aria-label="Google Pay">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="24">
+                  <rect width="48" height="48" rx="6" fill="#fff" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+                  <text x="7" y="30" font-size="11" font-weight="700" font-family="Arial,sans-serif">
+                    <tspan fill="#4285F4">G</tspan><tspan fill="#EA4335">o</tspan><tspan fill="#FBBC05">o</tspan><tspan fill="#4285F4">g</tspan><tspan fill="#34A853">l</tspan><tspan fill="#EA4335">e</tspan>
+                  </text>
+                  <text x="7" y="42" font-size="10" font-weight="600" font-family="Arial,sans-serif" fill="#5f6368"> Pay</text>
+                </svg>
+              </span>
+
+            </div>
+
+            <!-- Newsletter -->
+            <p class="footer-newsletter-text">
+              By entering your email address below, you consent to receiving our newsletter with
+              access to our latest collections, events and initiatives.
+            </p>
+            <div class="footer-newsletter">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18" class="footer-newsletter-icon">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+              </svg>
+              <input type="email" class="footer-newsletter-input" placeholder="Enter your email" aria-label="Enter your email for newsletter" />
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Copyright bar -->
+      <div class="footer-bottom">
+        <div class="footer-bottom-inner">
+          <p>&copy; {new Date().getFullYear()} OrthoHouse Cyprus. All rights reserved.</p>
+          <div class="footer-powered">
+            Powered by <a href="https://www.itdev.gr/" target="_blank" rel="noopener noreferrer">IT DEV</a>
+          </div>
+          <div class="footer-bottom-links">
+            <a href="/pages/privacy-policy">Privacy Policy</a>
+            <a href="/pages/terms-of-service">Terms of Service</a>
+            <a href="/pages/refund-policy">Refund Policy</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script
+      id="shopify-config"
+      type="application/json"
+      set:html={JSON.stringify(shopifyConfig)}
+    />
+    <script is:inline>
+      try { window.__shopifyConfig = JSON.parse(document.getElementById("shopify-config").textContent); } catch {}
+    </script>
+    <script src="/cart.js" defer></script>
+
+    {swrData && (
+      <script
+        id="swr-data"
+        type="application/json"
+        set:html={JSON.stringify({
+          config: shopifyConfig,
+          query: swrData.query,
+          variables: swrData.variables,
+          data: swrData.data,
+          extract: swrData.extract,
+        })}
+      />
+    )}
+    {swrData && <script src="/swr.js" defer />}
+
+    <!-- ══════════════════════════════════════
+         SEARCH OVERLAY — open / close / search
+         ══════════════════════════════════════ -->
+    <script is:inline>
+    (function () {
+      var backdrop      = document.getElementById("sov-backdrop");
+      var panel         = document.getElementById("sov-panel");
+      var sovInput      = document.getElementById("sov-input");
+      var sovClose      = document.getElementById("sov-close");
+      var sovFeatured   = document.getElementById("sov-featured");
+      var sovHint       = document.getElementById("sov-hint");
+      var sovResults    = document.getElementById("sov-results");
+      var sovResGrid    = document.getElementById("sov-results-grid");
+      var sovSeeAll     = document.getElementById("sov-see-all");
+      var sovQueryLabel = document.getElementById("sov-query-label");
+
+      /* ── Load embedded product data ── */
+      var searchData = [];
+      try {
+        searchData = JSON.parse(
+          document.getElementById("sov-search-data").textContent || "[]"
+        );
+      } catch (e) {}
+
+      /* ── Open / close helpers ── */
+      function openSOV() {
+        if (!backdrop) return;
+        backdrop.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+        // Focus the overlay input after the slide-up animation starts
+        setTimeout(function () { if (sovInput) sovInput.focus(); }, 320);
+      }
+      window.openSOV = openSOV; // expose for the inline header handler
+
+      function closeSOV() {
+        if (!backdrop) return;
+        backdrop.classList.remove("is-open");
+        document.body.style.overflow = "";
+        if (sovInput) sovInput.value = "";
+        if (panel) panel.scrollTop = 0;
+        showFeatured();
+      }
+
+      function showFeatured() {
+        if (sovFeatured) sovFeatured.style.display = "";
+        if (sovHint)     sovHint.style.display     = "";
+        if (sovResults)  sovResults.style.display  = "none";
+      }
+
+      function showResults(query) {
+        if (sovFeatured) sovFeatured.style.display = "none";
+        if (sovHint)     sovHint.style.display     = "none";
+        if (sovResults)  sovResults.style.display  = "";
+
+        var q        = query.toLowerCase();
+        var filtered = searchData.filter(function (p) {
+          return p.t.toLowerCase().indexOf(q) !== -1;
+        });
+
+        if (filtered.length === 0) {
+          if (sovResGrid) sovResGrid.innerHTML =
+            '<p class="sov-no-results">No products found for &ldquo;' + query + '&rdquo;</p>';
+          if (sovSeeAll) sovSeeAll.style.display = "none";
+          return;
+        }
+
+        if (sovResGrid) {
+          sovResGrid.innerHTML = filtered.slice(0, 12).map(function (p) {
+            var isSale    = p.c > 0 && p.c > p.p;
+            var priceHtml = isSale
+              ? '<s class="sov-compare-price">' + p.cu + " " + p.c.toFixed(2) + '</s>'
+                + '<span class="sov-curr-price sale">' + p.cu + " " + p.p.toFixed(2) + "</span>"
+              : '<span class="sov-curr-price">'  + p.cu + " " + p.p.toFixed(2) + "</span>";
+            var availHtml = '<span class="sov-avail ' + (p.a ? "in" : "out") + '">'
+              + "● " + (p.a ? "In Stock" : "Out of Stock") + "</span>";
+            var imgHtml = p.i
+              ? '<img src="' + p.i + '" alt="' + p.t.replace(/"/g, "&quot;") + '" />'
+              : '<div class="sov-prod-no-img"></div>';
+            return (
+              '<a href="/products/' + p.h + '" class="sov-prod sov-result-item">'
+              + '<div class="sov-prod-thumb">' + imgHtml + "</div>"
+              + '<div class="sov-prod-info">'
+              +   '<p class="sov-prod-name">' + p.t + "</p>"
+              +   '<div class="sov-price-row">' + priceHtml + "</div>"
+              +   availHtml
+              + "</div></a>"
+            );
+          }).join("");
+        }
+
+        if (sovSeeAll && sovQueryLabel) {
+          sovQueryLabel.textContent = query;
+          sovSeeAll.href = "/search?q=" + encodeURIComponent(query);
+          sovSeeAll.style.display = "";
+        }
+      }
+
+      /* ── Input events ── */
+      if (sovInput) {
+        sovInput.addEventListener("input", function () {
+          var q = sovInput.value.trim();
+          if (q.length === 0) showFeatured();
+          else                showResults(q);
+        });
+        sovInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            var q = sovInput.value.trim();
+            if (q) window.location.href = "/search?q=" + encodeURIComponent(q);
+          }
+        });
+      }
+
+      /* ── Quick pills ── */
+      document.querySelectorAll(".sov-pill").forEach(function (pill) {
+        pill.addEventListener("click", function () {
+          var q = pill.getAttribute("data-q");
+          if (sovInput) sovInput.value = q;
+          showResults(q);
+          if (sovInput) sovInput.focus();
+        });
+      });
+
+      /* ── Close on backdrop click ── */
+      if (backdrop) {
+        backdrop.addEventListener("click", function (e) {
+          if (e.target === backdrop) closeSOV();
+        });
+      }
+      if (sovClose) sovClose.addEventListener("click", closeSOV);
+
+      /* ── Close product links (close overlay when navigating) ── */
+      if (backdrop) {
+        backdrop.addEventListener("click", function (e) {
+          var link = e.target.closest(".sov-prod");
+          if (link) {
+            backdrop.classList.remove("is-open");
+            document.body.style.overflow = "";
+          }
+        });
+      }
+
+      /* ── Escape key ── */
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && backdrop && backdrop.classList.contains("is-open")) {
+          closeSOV();
+        }
+      });
+    })();
+    </script>
+
+    <!-- Mega-menu + mobile drawer interaction -->
+    <script is:inline>
+    (function () {
+      /* ── Desktop mega-menu ── */
+      var catItems = document.querySelectorAll(".cat-item");
+      var triggers = document.querySelectorAll(".cat-trigger[aria-expanded]");
+      var panels = document.querySelectorAll(".mega-panel");
+
+      function closeAllPanels() {
+        triggers.forEach(function (t) {
+          t.setAttribute("aria-expanded", "false");
+          t.classList.remove("is-active");
+        });
+        catItems.forEach(function (item) {
+          item.classList.remove("is-open");
+        });
+        panels.forEach(function (p) {
+          p.classList.remove("is-open");
+        });
+      }
+
+      triggers.forEach(function (trigger) {
+        trigger.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var item = trigger.closest(".cat-item");
+          var idx = item.getAttribute("data-index");
+          var panel = document.getElementById("mega-panel-" + idx);
+          var isOpen = item.classList.contains("is-open");
+
+          closeAllPanels();
+
+          if (!isOpen) {
+            item.classList.add("is-open");
+            trigger.setAttribute("aria-expanded", "true");
+            trigger.classList.add("is-active");
+            if (panel) panel.classList.add("is-open");
+          }
+        });
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".cat-bar")) {
+          closeAllPanels();
+        }
+        if (!e.target.closest(".pages-menu")) {
+          closePagesMenu();
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          closeAllPanels();
+          closePagesMenu();
+          closeDrawer();
+        }
+      });
+
+      /* ── Pages menu dropdown ── */
+      var pagesMenuBtn = document.getElementById("pages-menu-btn");
+      var pagesMenuDropdown = document.getElementById("pages-menu-dropdown");
+
+      function closePagesMenu() {
+        if (pagesMenuBtn) pagesMenuBtn.setAttribute("aria-expanded", "false");
+        if (pagesMenuDropdown) pagesMenuDropdown.classList.remove("is-open");
+      }
+
+      if (pagesMenuBtn) {
+        pagesMenuBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          closeAllPanels();
+          openDrawer();
+        });
+      }
+
+      /* ── Mobile drawer ── */
+      var hamburgerBtn = document.getElementById("hamburger-btn");
+      var drawer = document.getElementById("mobile-drawer");
+      var overlay = document.getElementById("mobile-overlay");
+      var closeBtn = document.getElementById("drawer-close");
+
+      function openDrawer() {
+        drawer.classList.add("is-open");
+        overlay.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove("is-open");
+        overlay.classList.remove("is-open");
+        document.body.style.overflow = "";
+      }
+
+      if (hamburgerBtn) hamburgerBtn.addEventListener("click", openDrawer);
+      if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
+      if (overlay) overlay.addEventListener("click", closeDrawer);
+
+      /* ── Mobile drawer accordion ── */
+      var drawerTriggers = document.querySelectorAll(".drawer-trigger[data-drawer-index]");
+      drawerTriggers.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var idx = btn.getAttribute("data-drawer-index");
+          var children = document.getElementById("drawer-children-" + idx);
+          var isOpen = btn.classList.contains("is-expanded");
+          drawerTriggers.forEach(function (b) {
+            b.classList.remove("is-expanded");
+            var c = document.getElementById("drawer-children-" + b.getAttribute("data-drawer-index"));
+            if (c) c.style.maxHeight = null;
+          });
+          if (!isOpen && children) {
+            btn.classList.add("is-expanded");
+            children.style.maxHeight = children.scrollHeight + "px";
+          }
+        });
+      });
+
+      /* ── Search bar → opens overlay ── */
+      (function () {
+        var input = document.querySelector(".top-search-input");
+        var icon  = document.querySelector(".top-search-icon");
+        // Intercept mousedown so the input never actually gets focus
+        if (input) {
+          input.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            openSOV();
+          });
+        }
+        if (icon) {
+          icon.style.pointerEvents = "auto";
+          icon.style.cursor = "pointer";
+          icon.addEventListener("click", openSOV);
+        }
+        // Mobile search button
+        var mobileSearchBtn = document.getElementById("mobile-search-btn");
+        if (mobileSearchBtn) mobileSearchBtn.addEventListener("click", openSOV);
+      })();
+    })();
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #1a1a1a;
+    background: #fafafa;
+    overflow-x: hidden;
+  }
+
+  /* ══════════════════════════════════════
+     HEADER
+     ══════════════════════════════════════ */
+  header {
+    position: relative;
+    z-index: 100;
+  }
+
+  /* ── Row 1: White top bar ── */
+  .top-bar {
+    background: #fff;
+    border-bottom: 1px solid #e5e5e5;
+    padding: 0 2rem;
+  }
+  .top-bar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 83px;
+  }
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+  }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .nav-logo-img {
+    height: 76px;
+    width: auto;
+    display: block;
+  }
+
+  /* ── Pages menu (hamburger + "Menu" right of logo) ── */
+  .pages-menu {
+    position: relative;
+  }
+  .pages-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.62rem;
+    padding: 0.62rem 1.24rem;
+    font-size: 1.24rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .pages-menu-btn:hover {
+    background: #f0f4ff;
+  }
+  .pages-menu-btn[aria-expanded="true"] {
+    background: #f0f4ff;
+  }
+  .pages-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 240px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    z-index: 150;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.18s, visibility 0.18s, transform 0.18s;
+    padding: 0.5rem 0;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .pages-menu-dropdown.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  /* Section header labels (e.g. "Categories", "Pages") */
+  .pages-menu-section {
+    display: block;
+    padding: 0.55rem 1.25rem 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #999;
+  }
+  /* Divider between sections */
+  .pages-menu-divider {
+    border: none;
+    border-top: 1px solid #f0f0f0;
+    margin: 0.4rem 0;
+  }
+  .pages-menu-link {
+    display: block;
+    padding: 0.62rem 1.25rem;
+    font-size: 0.92rem;
+    color: #333;
+    text-decoration: none;
+    transition: background 0.12s, color 0.12s;
+  }
+  .pages-menu-link:hover {
+    background: #f0f4ff;
+    color: #1e3a5f;
+  }
+
+  /* ── Search bar (center) ── */
+  .top-search {
+    flex: 1;
+    max-width: 480px;
+    position: relative;
+    margin: 0 1.5rem;
+  }
+  .top-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    pointer-events: none;
+  }
+  .top-search-input {
+    width: 100%;
+    height: 55px;
+    padding: 0 1.38rem 0 3.45rem;
+    font-size: 1.21rem;
+    font-family: inherit;
+    color: #333;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+  .top-search-input::placeholder {
+    color: #aaa;
+  }
+  .top-search-input:focus {
+    background: #fff;
+    border-color: #1e3a5f;
+    box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.1);
+  }
+
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .top-icon-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 49px;
+    height: 49px;
+    border-radius: 8px;
+    background: none;
+    border: none;
+    color: #444;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .top-icon-btn:hover {
+    background: #f0f4ff;
+    color: #1e3a5f;
+  }
+  .top-lang-btn {
+    font-size: 1.08rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #444;
+    padding: 0.41rem 0.83rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .top-lang-btn:hover {
+    border-color: #1e3a5f;
+    color: #1e3a5f;
+  }
+  .lang-active { font-weight: 700; }
+  .lang-sep { color: #bbb; margin: 0 1px; }
+  .lang-inactive { color: #aaa; font-weight: 500; }
+
+  /* Cart badge */
+  .cart-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #1e3a5f;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    min-width: 17px;
+    height: 17px;
+    line-height: 17px;
+    text-align: center;
+    border-radius: 9px;
+    padding: 0 4px;
+  }
+
+  /* Hamburger — hidden on desktop */
+  .hamburger-btn { display: none; }
+
+  /* ── Row 2: Dark blue category bar ── */
+  .cat-bar {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+    padding: 0 2rem;
+    position: relative;
+  }
+  .cat-bar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 79px;
+    flex-wrap: wrap;
+  }
+  .cat-item {
+    position: static;
+    border-right: 2px solid rgba(255, 255, 255, 0.3);
+    padding-right: 1rem;
+  }
+  .cat-item:last-child {
+    border-right: none;
+    padding-right: 0;
+  }
+  .cat-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.83rem 2rem;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #fff;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background 0.15s;
+    font-family: inherit;
+    letter-spacing: 0.02em;
+  }
+  .cat-trigger:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .cat-trigger.is-active {
+    background: rgba(255, 255, 255, 0.18);
+  }
+  .cat-chevron {
+    transition: transform 0.2s;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+  .cat-trigger.is-active .cat-chevron {
+    transform: rotate(180deg);
+    opacity: 1;
+  }
+
+  /* ── Mega Panel (dark blue dropdown) ── */
+  .mega-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #1e3a5f;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    z-index: 101;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.18s, visibility 0.18s, transform 0.18s;
+  }
+  .mega-panel.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .mega-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.75rem 2.5rem;
+  }
+  .mega-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 0.35rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .mega-link {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    padding: 0.45rem 0.7rem;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .mega-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .mega-view-all {
+    display: inline-block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    transition: color 0.15s;
+  }
+  .mega-view-all:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  /* ══════════════════════════════════════
+     SIDE OVERLAY & DRAWER
+     ══════════════════════════════════════ */
+  .mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 199;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.32s ease, visibility 0.32s ease;
+  }
+  .mobile-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Drawer panel */
+  .mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 340px;
+    max-width: 88vw;
+    height: 100vh;
+    height: 100dvh;
+    background: #fff;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 6px 0 40px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+  }
+  .mobile-drawer.is-open {
+    transform: translateX(0);
+  }
+
+
+  /* ── Scrollable nav body ── */
+  .drawer-nav {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .drawer-nav::-webkit-scrollbar { width: 4px; }
+  .drawer-nav::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 2px; }
+
+  /* Section labels */
+  .drawer-section-label {
+    padding: 1.1rem 1.25rem 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: #b0b8c8;
+    margin: 0;
+  }
+
+  /* Category rows */
+  .drawer-cat-item {
+    border-bottom: 1px solid #f0f2f5;
+  }
+  .drawer-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.95rem 1.25rem;
+    font-size: 0.97rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1.3;
+  }
+  .drawer-trigger:hover {
+    background: #f4f7ff;
+    color: #1e3a5f;
+  }
+  .drawer-trigger.is-expanded {
+    color: #1e3a5f;
+    background: #eef2fc;
+  }
+  .drawer-chevron {
+    flex-shrink: 0;
+    color: #c8cdd8;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s;
+  }
+  .drawer-trigger.is-expanded .drawer-chevron {
+    transform: rotate(90deg);
+    color: #1e3a5f;
+  }
+
+  /* Sub-links (children) */
+  .drawer-children {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #f8faff;
+    border-top: 1px solid #eef0f7;
+  }
+  .drawer-sub-link {
+    display: block;
+    padding: 0.65rem 1.25rem 0.65rem 2rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #4a5568;
+    text-decoration: none;
+    border-bottom: 1px solid #f0f2f7;
+    transition: color 0.15s, background 0.15s;
+  }
+  .drawer-sub-link:last-child {
+    border-bottom: none;
+  }
+  .drawer-sub-link:hover {
+    color: #1e3a5f;
+    background: #edf2ff;
+  }
+  .drawer-view-all {
+    font-weight: 700;
+    color: #1e3a5f;
+    font-size: 0.82rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-top: 1px solid #dde5ff;
+  }
+  .drawer-view-all:hover {
+    background: #e8edff;
+  }
+
+  /* Thick divider band */
+  .drawer-band {
+    height: 7px;
+    background: #f0f2f7;
+    margin: 0.35rem 0;
+  }
+
+  /* Page links */
+  .drawer-page-link {
+    display: block;
+    padding: 0.82rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #444;
+    text-decoration: none;
+    border-bottom: 1px solid #f4f4f6;
+    transition: color 0.15s, background 0.15s;
+  }
+  .drawer-page-link:hover {
+    color: #1e3a5f;
+    background: #f4f7ff;
+  }
+
+  /* ── Drawer footer ── */
+  .drawer-footer {
+    padding: 1rem 1.25rem;
+    border-top: 2px solid #eef0f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: #fff;
+  }
+  .drawer-footer-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .drawer-footer-link:hover {
+    color: #2d5a8e;
+  }
+  .drawer-lang {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #666;
+  }
+
+  /* ══════════════════════════════════════
+     MOBILE BREAKPOINT
+     ══════════════════════════════════════ */
+  @media (max-width: 768px) {
+    .top-bar { padding: 0 1rem; }
+    .top-bar-inner { height: 72px; }
+    .cat-bar { display: none; }
+    .top-lang-btn { display: none; }
+    .top-profile { display: none; }
+    .hamburger-btn { display: flex; }
+    .mobile-search-btn { display: flex; }
+    .nav-logo-img { height: 52px; }
+    .pages-menu { display: none; }
+    .top-search { display: none; }
+
+    /* Overlay mobile tweaks */
+    .sov-inner { padding: 1.25rem 1rem 2rem; }
+    .sov-panel { max-height: 92vh; border-radius: 16px 16px 0 0; }
+    .sov-cols,
+    .sov-results-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem 1rem; }
+    .sov-col-title { font-size: 0.68rem; }
+    .sov-prod-thumb { width: 50px; height: 50px; }
+    .sov-prod-name { font-size: 0.75rem; }
+  }
+
+  /* ══════════════════════════════════════
+     MAIN CONTENT & FOOTER
+     ══════════════════════════════════════ */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  /* ══════════════════════════════════════
+     FOOTER
+     ══════════════════════════════════════ */
+  .site-footer {
+    margin-top: 3rem;
+  }
+
+  /* Main footer area */
+  .footer-main {
+    background: #1e3a5f;
+    padding: 3rem 2rem;
+  }
+  .footer-inner {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .footer-col {}
+  .footer-heading {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.02em;
+  }
+  .footer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .footer-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+  }
+  .footer-list li svg {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .footer-list li a {
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .footer-list li a:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  /* Payment methods strip */
+  .footer-payments {
+    background: #17304f;
+    padding: 1.25rem 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .footer-payments-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .footer-payments-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .footer-newsletter-text {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.6;
+    margin: 0 0 0.75rem 0;
+  }
+  .footer-newsletter {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+  .footer-newsletter-icon {
+    color: rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+  }
+  .footer-newsletter-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+    color: #fff;
+    font-family: inherit;
+  }
+  .footer-newsletter-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .payment-icons {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+    margin-bottom: 3rem;
+  }
+  .payment-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+  }
+
+  /* Copyright bar */
+  .footer-bottom {
+    background: #122a42;
+    padding: 1rem 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .footer-bottom-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .footer-bottom p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+  }
+  .footer-bottom-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+  .footer-bottom-links a {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .footer-bottom-links a:hover {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: underline;
+  }
+
+  .footer-powered {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.3);
+  }
+  .footer-powered a {
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .footer-powered a:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  /* Mobile search button — hidden on desktop, shown on mobile via media query above */
+  @media (min-width: 769px) {
+    .mobile-search-btn { display: none; }
+  }
+
+  /* ══════════════════════════════════════
+     SEARCH OVERLAY
+     ══════════════════════════════════════ */
+
+  /* Backdrop (darkened page) */
+  .sov-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    background: rgba(10, 18, 35, 0.55);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .sov-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Slide-up panel */
+  .sov-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    max-height: 88vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
+  }
+  .sov-backdrop.is-open .sov-panel {
+    transform: translateY(0);
+  }
+
+  /* Inner content — max-width constrained */
+  .sov-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 2.5rem;
+  }
+
+  /* ── Search header row ── */
+  .sov-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #eef0f3;
+    padding-bottom: 1rem;
+  }
+  .sov-input-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .sov-icon {
+    position: absolute;
+    left: 0.85rem;
+    color: #9ca3af;
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+  .sov-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 1rem 0 2.75rem;
+    font-size: 1rem;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #f5f7fa;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .sov-input::placeholder { color: #aab0bb; }
+  .sov-input:focus {
+    border-color: #1e3a5f;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.08);
+  }
+  .sov-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .sov-close:hover {
+    background: #f5f7fa;
+    border-color: #1e3a5f;
+    color: #1e3a5f;
+  }
+
+  /* ── Quick pills ── */
+  .sov-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .sov-pill {
+    padding: 0.35rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #1e3a5f;
+    background: #eef2f8;
+    border: 1.5px solid #d5dff0;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .sov-pill:hover {
+    background: #1e3a5f;
+    border-color: #1e3a5f;
+    color: #fff;
+  }
+
+  /* ── Hint text ── */
+  .sov-hint {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+
+  /* ── 4-column featured grid ── */
+  .sov-cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+  .sov-col-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid #f0f2f5;
+  }
+
+  /* ── Product row ── */
+  .sov-prod {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.65rem 0;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid #f5f6f8;
+    transition: background 0.12s;
+    border-radius: 6px;
+  }
+  .sov-prod:last-child { border-bottom: none; }
+  .sov-prod:hover { background: #f8fafc; }
+
+  /* Thumbnail */
+  .sov-prod-thumb {
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f0f4f8;
+    border: 1px solid #e8edf3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sov-prod-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
+    display: block;
+  }
+  .sov-prod-no-img {
+    width: 100%;
+    height: 100%;
+    background: #e8edf3;
+    border-radius: 8px;
+  }
+
+  /* Info area */
+  .sov-prod-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+  }
+  .sov-prod-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.35;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .sov-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .sov-curr-price {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+  .sov-curr-price.sale { color: #dc2626; }
+  .sov-compare-price {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-decoration: line-through;
+  }
+  .sov-avail {
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .sov-avail.in  { color: #16a34a; }
+  .sov-avail.out { color: #dc2626; }
+
+  /* ── Live search results grid ── */
+  .sov-results-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0 1.5rem;
+  }
+  .sov-no-results {
+    font-size: 0.9rem;
+    color: #9ca3af;
+    padding: 1rem 0;
+    grid-column: 1 / -1;
+  }
+
+  /* "See all results" link */
+  .sov-see-all {
+    display: block;
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    text-decoration: none;
+    padding: 0.6rem 0;
+    border-top: 1px solid #f0f2f5;
+    transition: color 0.15s;
+  }
+  .sov-see-all:hover { color: #2563eb; text-decoration: underline; }
+
+  /* ── Tablet: 2 cols ── */
+  @media (max-width: 1024px) {
+    .sov-cols,
+    .sov-results-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Footer mobile */
+  @media (max-width: 768px) {
+    .footer-inner {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .footer-col {
+      text-align: center;
+    }
+    .footer-list li {
+      justify-content: center;
+    }
+    .payment-icons {
+      justify-content: center;
+    }
+    .footer-bottom-inner {
+      flex-direction: column;
+      text-align: center;
+    }
+    .footer-bottom-links {
+      justify-content: center;
+    }
+  }
+</style>
