@@ -1696,11 +1696,15 @@ const catDataJSON = JSON.stringify(
       grid-template-columns: 1fr;
     }
     .ortho-left {
-      max-height: 420px;
       min-height: auto;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .body-map-wrap {
+      aspect-ratio: 1 / 1;
     }
     .human-img {
-      object-fit: contain;
+      object-fit: cover;
     }
   }
   @media (max-width: 600px) {
