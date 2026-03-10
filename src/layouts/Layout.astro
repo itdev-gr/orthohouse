@@ -64,6 +64,12 @@ const sovSearchData = JSON.stringify(
     };
   })
 );
+
+function shopifyThumb(url: string, w = 300) {
+  if (!url) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}width=${w}`;
+}
 ---
 
 <!doctype html>
@@ -72,6 +78,9 @@ const sovSearchData = JSON.stringify(
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" as="image" href="/hero-768.webp" type="image/webp"
+      imagesrcset="/hero-480.webp 480w, /hero-768.webp 768w, /hero-1200.webp 1200w"
+      imagesizes="100vw" />
     <title>{title}</title>
   </head>
   <body>
@@ -82,7 +91,7 @@ const sovSearchData = JSON.stringify(
           <!-- Left group: Logo + Pages menu -->
           <div class="top-bar-left">
             <a href="/" class="nav-logo">
-              <img src="https://orthohouse.com.cy/cdn/shop/files/logo_website.png?v=1767804500&width=240" alt="OrthoHouse Cyprus" class="nav-logo-img" />
+              <img src="https://orthohouse.com.cy/cdn/shop/files/logo_website.png?v=1767804500&width=240" alt="OrthoHouse Cyprus" class="nav-logo-img" width="240" height="60" />
             </a>
 
             <!-- Pages menu (hamburger + "Menu" label) — right of logo -->
@@ -275,7 +284,7 @@ const sovSearchData = JSON.stringify(
                     <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
-                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
                           : <div class="sov-prod-no-img" />}
                       </div>
                       <div class="sov-prod-info">
@@ -300,7 +309,7 @@ const sovSearchData = JSON.stringify(
                     <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
-                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
                           : <div class="sov-prod-no-img" />}
                       </div>
                       <div class="sov-prod-info">
@@ -325,7 +334,7 @@ const sovSearchData = JSON.stringify(
                     <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
-                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
                           : <div class="sov-prod-no-img" />}
                       </div>
                       <div class="sov-prod-info">
@@ -350,7 +359,7 @@ const sovSearchData = JSON.stringify(
                     <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
-                          ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} />
+                          ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
                           : <div class="sov-prod-no-img" />}
                       </div>
                       <div class="sov-prod-info">
@@ -693,7 +702,7 @@ const sovSearchData = JSON.stringify(
             var availHtml = '<span class="sov-avail ' + (p.a ? "in" : "out") + '">'
               + "● " + (p.a ? "In Stock" : "Out of Stock") + "</span>";
             var imgHtml = p.i
-              ? '<img src="' + p.i + '" alt="' + p.t.replace(/"/g, "&quot;") + '" />'
+              ? '<img src="' + p.i + (p.i.indexOf('?')>-1?'&':'?') + 'width=120" alt="' + p.t.replace(/"/g, "&quot;") + '" width="80" height="80" loading="lazy" />'
               : '<div class="sov-prod-no-img"></div>';
             return (
               '<a href="/products/' + p.h + '" class="sov-prod sov-result-item">'

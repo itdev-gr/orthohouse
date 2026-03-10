@@ -64,6 +64,12 @@ const catResults = await Promise.all(
 const catProductMap: Record<string, any[]> = {};
 BODY_HANDLES.forEach((h, i) => { catProductMap[h] = catResults[i]; });
 
+function shopifyThumb(url: string, w = 300) {
+  if (!url) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}width=${w}`;
+}
+
 const catDataJSON = JSON.stringify(
   Object.fromEntries(
     Object.entries(catProductMap).map(([handle, prods]) => [
@@ -103,7 +109,14 @@ const catDataJSON = JSON.stringify(
        HERO BANNER
        ══════════════════════════════════════ -->
   <div class="hero-banner">
-    <img src="/ChatGPT_Image_Nov_25_2025_10_06_16_PM.webp" alt="OrthoHouse Cyprus" />
+    <img
+      src="/hero-768.webp"
+      srcset="/hero-480.webp 480w, /hero-768.webp 768w, /hero-1200.webp 1200w, /ChatGPT_Image_Nov_25_2025_10_06_16_PM.webp 1680w"
+      sizes="100vw"
+      alt="OrthoHouse Cyprus"
+      width="1680" height="1200"
+      fetchpriority="high" decoding="async"
+    />
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <p class="hero-tagline">AT ORTHOHOUSE, WE MAKE IT EASIER FOR YOU TO MOVE BETTER AND LIVE BETTER</p>
@@ -155,7 +168,7 @@ const catDataJSON = JSON.stringify(
                     {isSale && <span class="ortho-badge">Sale</span>}
                     <div class="ortho-card-img">
                       {p.featuredImage
-                        ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} loading="lazy"/>
+                        ? <img src={shopifyThumb(p.featuredImage.url, 300)} alt={p.featuredImage.altText || p.title} width="300" height="300" loading="lazy"/>
                         : <div class="ortho-card-no-img"/>}
                     </div>
                     <div class="ortho-card-body">
@@ -194,7 +207,6 @@ const catDataJSON = JSON.stringify(
 
   </section>
 
-  <script id="newprod-data" type="application/json" set:html={npJSON}></script>
 
   <!-- ══════════════════════════════════════
        ORTHOPAEDIC SHOWCASE
@@ -204,7 +216,7 @@ const catDataJSON = JSON.stringify(
     <!-- ── LEFT: human body image + dot markers ── -->
     <div class="ortho-left">
       <div class="body-map-wrap">
-        <img class="human-img" src="/humanbody-1.jpg" alt="Orthopaedic human body illustration" loading="lazy"/>
+        <img class="human-img" src="/humanbody-1.webp" alt="Orthopaedic human body illustration" width="1000" height="1000" loading="lazy"/>
         <div class="body-map-overlay" aria-hidden="true">
           <div class="body-dot" data-handle="head"                 style="left:50%;top:9%"><span class="dot-label">Head</span></div>
           <div class="body-dot" data-handle="cervical"             style="left:50%;top:16%"><span class="dot-label">Neck</span></div>
@@ -255,7 +267,7 @@ const catDataJSON = JSON.stringify(
                     {isSale && <span class="ortho-badge">Sale</span>}
                     <div class="ortho-card-img">
                       {p.featuredImage
-                        ? <img src={p.featuredImage.url} alt={p.featuredImage.altText || p.title} loading="lazy"/>
+                        ? <img src={shopifyThumb(p.featuredImage.url, 300)} alt={p.featuredImage.altText || p.title} width="300" height="300" loading="lazy"/>
                         : <div class="ortho-card-no-img"/>}
                     </div>
                     <div class="ortho-card-body">
@@ -397,7 +409,7 @@ const catDataJSON = JSON.stringify(
           class="cat-img"
           src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=900&auto=format&q=75"
           alt="Wheelchairs & Home Care"
-          loading="lazy"
+          width="900" height="600" loading="lazy"
         />
         <div class="cat-overlay"></div>
         <div class="cat-content">
@@ -422,7 +434,7 @@ const catDataJSON = JSON.stringify(
           class="cat-img"
           src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=900&auto=format&q=75"
           alt="Comfort & Well Being"
-          loading="lazy"
+          width="900" height="600" loading="lazy"
         />
         <div class="cat-overlay"></div>
         <div class="cat-content">
@@ -447,7 +459,7 @@ const catDataJSON = JSON.stringify(
           class="cat-img"
           src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=900&auto=format&q=75"
           alt="Walking Aids"
-          loading="lazy"
+          width="900" height="600" loading="lazy"
         />
         <div class="cat-overlay"></div>
         <div class="cat-content">
@@ -472,7 +484,7 @@ const catDataJSON = JSON.stringify(
           class="cat-img"
           src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&auto=format&q=75"
           alt="Orthopaedics"
-          loading="lazy"
+          width="900" height="600" loading="lazy"
         />
         <div class="cat-overlay"></div>
         <div class="cat-content">
@@ -490,7 +502,6 @@ const catDataJSON = JSON.stringify(
     </div>
   </section>
 
-  <script id="ortho-cat-data" type="application/json" set:html={catDataJSON}></script>
 
   <!-- New Products carousel logic -->
   <script is:inline>
@@ -506,10 +517,7 @@ const catDataJSON = JSON.stringify(
     var current = 0;
 
     var npData = {};
-    try {
-      var raw = document.getElementById("newprod-data");
-      if (raw) npData = JSON.parse(raw.textContent || "{}");
-    } catch(e) {}
+    fetch("/data/newprod.json").then(function(r){return r.json()}).then(function(d){npData=d;}).catch(function(){});
 
     function getDots() { return dotsWrap ? Array.from(dotsWrap.querySelectorAll(".newprod-dot")) : []; }
 
@@ -522,7 +530,7 @@ const catDataJSON = JSON.stringify(
       return '<a href="/products/' + p.h + '" class="ortho-card">'
         + (isSale ? '<span class="ortho-badge">Sale</span>' : '')
         + '<div class="ortho-card-img">'
-        + (p.img ? '<img src="' + esc(p.img) + '" alt="' + esc(p.alt) + '" loading="lazy"/>'
+        + (p.img ? '<img src="' + esc(p.img + (p.img.indexOf('?')>-1?'&':'?') + 'width=300') + '" alt="' + esc(p.alt) + '" width="300" height="300" loading="lazy"/>'
                  : '<div class="ortho-card-no-img"></div>')
         + '</div><div class="ortho-card-body">'
         + '<p class="ortho-card-name">' + esc(p.t) + '</p>'
@@ -637,10 +645,7 @@ const catDataJSON = JSON.stringify(
 
     // ── Pre-fetched category product data ────────────────────────────────
     var catData = {};
-    try {
-      var raw = document.getElementById("ortho-cat-data");
-      if (raw) catData = JSON.parse(raw.textContent || "{}");
-    } catch(e) {}
+    fetch("/data/ortho-cat.json").then(function(r){return r.json()}).then(function(d){catData=d;}).catch(function(){});
 
     // ── Carousel helpers ─────────────────────────────────────────────────
     function getDots() {
@@ -681,7 +686,7 @@ const catDataJSON = JSON.stringify(
         + (isSale ? '<span class="ortho-badge">Sale</span>' : '')
         + '<div class="ortho-card-img">'
         + (p.img
-            ? '<img src="' + escHtml(p.img) + '" alt="' + escHtml(p.alt) + '" loading="lazy"/>'
+            ? '<img src="' + escHtml(p.img + (p.img.indexOf('?')>-1?'&':'?') + 'width=300') + '" alt="' + escHtml(p.alt) + '" width="300" height="300" loading="lazy"/>'
             : '<div class="ortho-card-no-img"></div>')
         + '</div>'
         + '<div class="ortho-card-body">'
