@@ -922,19 +922,26 @@ function shopifyThumb(url: string, w = 300) {
     padding: 0;
     box-sizing: border-box;
   }
+  html {
+    overflow-x: hidden;
+    width: 100%;
+  }
   body {
     font-family: system-ui, -apple-system, sans-serif;
     color: #1a1a1a;
     background: #fafafa;
-    overflow-x: hidden;
+    width: 100%;
+    min-width: 0;
   }
 
   /* ══════════════════════════════════════
      HEADER
      ══════════════════════════════════════ */
   header {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 100;
+    width: 100%;
   }
 
   /* ── Row 1: White top bar ── */
@@ -1163,7 +1170,8 @@ function shopifyThumb(url: string, w = 300) {
     max-width: 1400px;
     margin: 0 auto;
     height: 79px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
   .cat-item {
     position: static;
@@ -1206,6 +1214,19 @@ function shopifyThumb(url: string, w = 300) {
   .cat-trigger.is-active .cat-chevron {
     transform: rotate(180deg);
     opacity: 1;
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .cat-trigger {
+      padding: 0.5rem 0.6rem;
+      font-size: 0.85rem;
+    }
+    .cat-bar-inner {
+      gap: 0.25rem;
+    }
+    .cat-item {
+      padding-right: 0.5rem;
+    }
   }
 
   /* ── Mega Panel (dark blue dropdown) ── */
@@ -1498,6 +1519,7 @@ function shopifyThumb(url: string, w = 300) {
      ══════════════════════════════════════ */
   .site-footer {
     margin-top: 3rem;
+    width: 100%;
   }
 
   /* Main footer area */
