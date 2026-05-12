@@ -124,6 +124,11 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "walking-aids",
     slogan: "Confident steps, every day",
     banner: { image: "/images/categories/walking-aids.webp", titlePosition: "top-left", accent: "#047857" },
+    supplierLogos: [
+      { src: "/images/suppliers/sponaplast.svg", alt: "Sponaplast", href: "https://www.sponaplast.com" },
+      { src: "/images/suppliers/fdi.svg", alt: "FDI" },
+      { src: "/images/suppliers/alimed.svg", alt: "AliMed", href: "https://www.alimed.com" },
+    ],
     children: [
       { label: "Rollators & Walkers", handle: "rollators" },
       { label: "Crutches", handle: "crutches" },
