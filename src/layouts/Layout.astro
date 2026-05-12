@@ -407,18 +407,25 @@ function shopifyThumb(url: string, w = 300) {
 
         {NAV_CATEGORIES.map((cat, i) => (
           <div class="drawer-cat-item">
-            {cat.children.length > 0 ? (
-              <button type="button" class="drawer-trigger" data-drawer-index={i}>
-                <span>{cat.label}</span>
-                <svg class="drawer-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="15" height="15">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
-              </button>
-            ) : (
-              <a href={`/collections/${cat.handle}`} class="drawer-trigger">
+            <div class="drawer-row">
+              <a href={`/collections/${cat.handle}`} class="drawer-trigger drawer-link">
                 <span>{cat.label}</span>
               </a>
-            )}
+              {cat.children.length > 0 && (
+                <button
+                  type="button"
+                  class="drawer-toggle"
+                  data-drawer-index={i}
+                  aria-label={`Toggle ${cat.label} subcategories`}
+                  aria-expanded="false"
+                  aria-controls={`drawer-children-${i}`}
+                >
+                  <svg class="drawer-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="15" height="15">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+              )}
+            </div>
             {cat.children.length > 0 && (
               <div class="drawer-children" id={`drawer-children-${i}`}>
                 {cat.children.map((sub) => (
@@ -873,7 +880,7 @@ function shopifyThumb(url: string, w = 300) {
       if (overlay) overlay.addEventListener("click", closeDrawer);
 
       /* ── Mobile drawer accordion ── */
-      var drawerTriggers = document.querySelectorAll(".drawer-trigger[data-drawer-index]");
+      var drawerTriggers = document.querySelectorAll(".drawer-toggle[data-drawer-index]");
       drawerTriggers.forEach(function (btn) {
         btn.addEventListener("click", function () {
           var idx = btn.getAttribute("data-drawer-index");
@@ -881,11 +888,17 @@ function shopifyThumb(url: string, w = 300) {
           var isOpen = btn.classList.contains("is-expanded");
           drawerTriggers.forEach(function (b) {
             b.classList.remove("is-expanded");
+            b.setAttribute("aria-expanded", "false");
+            var r = b.closest(".drawer-row");
+            if (r) r.classList.remove("is-expanded");
             var c = document.getElementById("drawer-children-" + b.getAttribute("data-drawer-index"));
             if (c) c.style.maxHeight = null;
           });
           if (!isOpen && children) {
             btn.classList.add("is-expanded");
+            btn.setAttribute("aria-expanded", "true");
+            var row = btn.closest(".drawer-row");
+            if (row) row.classList.add("is-expanded");
             children.style.maxHeight = children.scrollHeight + "px";
           }
         });
@@ -1167,18 +1180,22 @@ function shopifyThumb(url: string, w = 300) {
   .cat-bar-inner {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 1rem;
+    justify-content: flex-start;
+    gap: 0.25rem;
     max-width: 1400px;
     margin: 0 auto;
     height: 79px;
     flex-wrap: nowrap;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .cat-bar-inner::-webkit-scrollbar {
+    display: none;
   }
   .cat-item {
     position: static;
     border-right: 2px solid rgba(255, 255, 255, 0.3);
-    padding-right: 1rem;
+    padding-right: 0.5rem;
   }
   .cat-item:last-child {
     border-right: none;
@@ -1187,9 +1204,9 @@ function shopifyThumb(url: string, w = 300) {
   .cat-trigger {
     display: flex;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.83rem 2rem;
-    font-size: 1.15rem;
+    gap: 0.3rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.88rem;
     font-weight: 500;
     color: #fff;
     background: transparent;
@@ -1200,7 +1217,7 @@ function shopifyThumb(url: string, w = 300) {
     text-decoration: none;
     transition: background 0.15s;
     font-family: inherit;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
   }
   .cat-trigger:hover {
     background: rgba(255, 255, 255, 0.12);
@@ -1355,11 +1372,23 @@ function shopifyThumb(url: string, w = 300) {
   .drawer-cat-item {
     border-bottom: 1px solid #f0f2f5;
   }
+  .drawer-row {
+    display: flex;
+    align-items: stretch;
+    transition: background 0.15s;
+  }
+  .drawer-row.is-expanded {
+    background: #eef2fc;
+  }
+  .drawer-row.is-expanded .drawer-trigger {
+    color: #1e3a5f;
+  }
   .drawer-trigger {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 0.95rem 1.25rem;
     font-size: 0.97rem;
     font-weight: 600;
@@ -1377,18 +1406,29 @@ function shopifyThumb(url: string, w = 300) {
     background: #f4f7ff;
     color: #1e3a5f;
   }
-  .drawer-trigger.is-expanded {
-    color: #1e3a5f;
-    background: #eef2fc;
+  .drawer-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0 1.1rem;
+    background: none;
+    border: none;
+    border-left: 1px solid #eef0f7;
+    cursor: pointer;
+    color: inherit;
+    transition: background 0.15s;
+  }
+  .drawer-toggle:hover {
+    background: #f4f7ff;
   }
   .drawer-chevron {
     flex-shrink: 0;
-    color: #c8cdd8;
+    color: #1e3a5f;
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s;
   }
-  .drawer-trigger.is-expanded .drawer-chevron {
+  .drawer-toggle.is-expanded .drawer-chevron {
     transform: rotate(90deg);
-    color: #1e3a5f;
   }
 
   /* Sub-links (children) */

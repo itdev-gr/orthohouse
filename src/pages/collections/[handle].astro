@@ -5,21 +5,32 @@ import {
   getCollectionWithProducts,
   COLLECTION_PRODUCTS_QUERY,
 } from "../../lib/shopify";
+import { NAV_CATEGORIES, findNavCategory } from "../../lib/menuConfig";
 
 export async function getStaticPaths() {
   const collections = await getCollections();
-  return collections.map((c: any) => ({ params: { handle: c.handle } }));
+  const shopifyHandles = new Set(collections.map((c: any) => c.handle));
+  const navHandles = NAV_CATEGORIES.flatMap((c) => [
+    c.handle,
+    ...c.children.map((s) => s.handle),
+  ]);
+  const allHandles = new Set<string>([...shopifyHandles, ...navHandles]);
+  return Array.from(allHandles).map((handle) => ({ params: { handle } }));
 }
 
 const { handle } = Astro.params;
+const navCategory = findNavCategory(handle!);
+const navSubMatch = NAV_CATEGORIES.flatMap((c) => c.children).find(
+  (s) => s.handle === handle,
+);
 const { collection, products } = await getCollectionWithProducts(handle!);
 
-if (!collection) return Astro.redirect("/404");
+// 404 only when Shopify and nav config both don't know this handle.
+if (!collection && !navCategory && !navSubMatch) return Astro.redirect("/404");
 
-// Shopify collection descriptions sometimes contain injected app/widget content
-// (e.g. translation widgets whose text bleeds into the plain-text field).
-// We hide the description if it looks like widget/script garbage rather than
-// real copy: check for telltale patterns like language-list dumps or JS identifiers.
+const isTopLevel = !!navCategory;
+const pageTitle = collection?.title ?? navCategory?.label ?? navSubMatch?.label ?? handle!;
+
 const WIDGET_PATTERNS = [
   /TRANSLATE\s+with/i,
   /LanguageMenu/,
@@ -27,60 +38,327 @@ const WIDGET_PATTERNS = [
   /EMBED THE SNIPPET/i,
   /Enable collaborative/i,
 ];
-const rawDesc = collection.description ?? "";
+const rawDesc = collection?.description ?? "";
 const isGarbageDesc = WIDGET_PATTERNS.some((re) => re.test(rawDesc));
 const safeDescription = isGarbageDesc ? "" : rawDesc;
+
+const accent = navCategory?.banner?.accent ?? "#1e3a5f";
+const titlePosition = navCategory?.banner?.titlePosition ?? "bottom-left";
+const bannerImage = navCategory?.banner?.image;
+const supplierLogos = navCategory?.supplierLogos ?? [];
+const subcategories = navCategory?.children ?? [];
 ---
 
 <Layout
-  title={collection.title}
-  swrData={{
+  title={pageTitle}
+  swrData={collection ? {
     query: COLLECTION_PRODUCTS_QUERY,
     variables: { handle, first: 50 },
     data: products,
     extract: "collection.products.nodes",
-  }}
+  } : undefined}
 >
-  <a href="/" class="back">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-    </svg>
-    Back to products
-  </a>
-  <h1>{collection.title}</h1>
-  {safeDescription && <p class="desc">{safeDescription}</p>}
-  <div class="grid" id="swr-target">
-    {products.map((product: any) => (
-      <a class="card" href={`/products/${product.handle}`}>
-        <div class="card-img-wrap">
-          {product.featuredImage ? (
-            <img
-              src={product.featuredImage.url}
-              alt={product.featuredImage.altText || product.title}
-            />
-          ) : (
-            <div class="card-img-placeholder" />
+  {isTopLevel ? (
+    <>
+      <section
+        class:list={["cat-banner", `pos-${titlePosition}`]}
+        style={`--accent: ${accent}; ${bannerImage ? `--banner-image: url('${bannerImage}');` : ""}`}
+        data-has-image={bannerImage ? "true" : "false"}
+      >
+        <div class="cat-banner-inner">
+          <h1 class="cat-title">{navCategory!.label}</h1>
+          {navCategory!.slogan && (
+            <p class="cat-slogan">{navCategory!.slogan}</p>
           )}
         </div>
-        <div class="info">
-          <h2 class="card-title">{product.title}</h2>
-          <p class="price">
-            {product.priceRange.minVariantPrice.currencyCode}{" "}
-            {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
-          </p>
-          <div class="card-cta">
-            View Product
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-            </svg>
+      </section>
+
+      {supplierLogos.length > 0 && (
+        <section class="supplier-strip" aria-label="Our suppliers">
+          <ul>
+            {supplierLogos.map((logo) => (
+              <li>
+                {logo.href ? (
+                  <a href={logo.href} target="_blank" rel="noopener">
+                    <img src={logo.src} alt={logo.alt} loading="lazy" />
+                  </a>
+                ) : (
+                  <img src={logo.src} alt={logo.alt} loading="lazy" />
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {subcategories.length > 0 && (
+        <section class="subcat-section">
+          <h2 class="section-heading">Browse by category</h2>
+          <div class="subcat-grid">
+            {subcategories.map((sub) => (
+              <a href={`/collections/${sub.handle}`} class="subcat-tile" style={`--accent: ${accent};`}>
+                <div class="subcat-icon" aria-hidden="true">
+                  {sub.icon ? (
+                    <img src={sub.icon} alt="" />
+                  ) : (
+                    <span class="subcat-initial">{sub.label.charAt(0)}</span>
+                  )}
+                </div>
+                <div class="subcat-meta">
+                  <span class="subcat-label">{sub.label}</span>
+                  {sub.description && (
+                    <span class="subcat-desc">{sub.description}</span>
+                  )}
+                </div>
+              </a>
+            ))}
           </div>
-        </div>
+        </section>
+      )}
+
+      {products.length > 0 && (
+        <section class="products-section">
+          <h2 class="section-heading">Featured products</h2>
+          <div class="grid" id="swr-target">
+            {products.map((product: any) => (
+              <a class="card" href={`/products/${product.handle}`}>
+                <div class="card-img-wrap">
+                  {product.featuredImage ? (
+                    <img
+                      src={product.featuredImage.url}
+                      alt={product.featuredImage.altText || product.title}
+                    />
+                  ) : (
+                    <div class="card-img-placeholder" />
+                  )}
+                </div>
+                <div class="info">
+                  <h3 class="card-title">{product.title}</h3>
+                  <p class="price">
+                    {product.priceRange.minVariantPrice.currencyCode}{" "}
+                    {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+                  </p>
+                  <div class="card-cta">
+                    View Product
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  ) : (
+    <>
+      <a href="/" class="back">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+        Back to products
       </a>
-    ))}
-  </div>
+      <h1>{pageTitle}</h1>
+      {safeDescription && <p class="desc">{safeDescription}</p>}
+      <div class="grid" id="swr-target">
+        {products.map((product: any) => (
+          <a class="card" href={`/products/${product.handle}`}>
+            <div class="card-img-wrap">
+              {product.featuredImage ? (
+                <img
+                  src={product.featuredImage.url}
+                  alt={product.featuredImage.altText || product.title}
+                />
+              ) : (
+                <div class="card-img-placeholder" />
+              )}
+            </div>
+            <div class="info">
+              <h2 class="card-title">{product.title}</h2>
+              <p class="price">
+                {product.priceRange.minVariantPrice.currencyCode}{" "}
+                {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+              </p>
+              <div class="card-cta">
+                View Product
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </>
+  )}
 </Layout>
 
 <style>
+  /* ── Banner ── */
+  .cat-banner {
+    position: relative;
+    min-height: 320px;
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 0 0 2rem;
+    background-color: var(--accent, #1e3a5f);
+    background-image: linear-gradient(135deg, color-mix(in oklab, var(--accent) 92%, black 8%) 0%, color-mix(in oklab, var(--accent) 70%, white 30%) 100%);
+    color: #fff;
+    isolation: isolate;
+  }
+  .cat-banner[data-has-image="true"] {
+    background-image: var(--banner-image);
+    background-size: cover;
+    background-position: center;
+  }
+  .cat-banner[data-has-image="true"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.55) 100%);
+    z-index: 0;
+  }
+  .cat-banner-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(1.25rem, 3vw, 2.5rem);
+    z-index: 1;
+  }
+  .cat-banner.pos-top-left    .cat-banner-inner { justify-content: flex-start; align-items: flex-start; text-align: left;  }
+  .cat-banner.pos-top-right   .cat-banner-inner { justify-content: flex-start; align-items: flex-end;   text-align: right; }
+  .cat-banner.pos-bottom-left .cat-banner-inner { justify-content: flex-end;   align-items: flex-start; text-align: left;  }
+  .cat-banner.pos-bottom-right .cat-banner-inner { justify-content: flex-end;  align-items: flex-end;   text-align: right; }
+
+  .cat-title {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    max-width: 60%;
+  }
+  .cat-slogan {
+    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+    font-weight: 500;
+    opacity: 0.92;
+    margin: 0.5rem 0 0;
+    max-width: 60%;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+
+  /* ── Supplier logos strip ── */
+  .supplier-strip {
+    margin: 0 0 2rem;
+    padding: 1.1rem 1.25rem;
+    background: #fff;
+    border: 1px solid #eef0f7;
+    border-radius: 12px;
+  }
+  .supplier-strip ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem 2.5rem;
+    align-items: center;
+    justify-content: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .supplier-strip img {
+    max-height: 36px;
+    max-width: 140px;
+    object-fit: contain;
+    filter: grayscale(100%);
+    opacity: 0.75;
+    transition: filter 0.2s, opacity 0.2s;
+  }
+  .supplier-strip a:hover img,
+  .supplier-strip li:hover img {
+    filter: grayscale(0%);
+    opacity: 1;
+  }
+
+  /* ── Section headings ── */
+  .section-heading {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 1.1rem;
+    letter-spacing: -0.01em;
+  }
+  .subcat-section,
+  .products-section {
+    margin: 0 0 2.5rem;
+  }
+
+  /* ── Subcategory grid ── */
+  .subcat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  .subcat-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .subcat-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(30, 58, 95, 0.1);
+    border-color: var(--accent, #1e3a5f);
+  }
+  .subcat-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: color-mix(in oklab, var(--accent, #1e3a5f) 12%, white 88%);
+    color: var(--accent, #1e3a5f);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .subcat-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+  }
+  .subcat-initial {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .subcat-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+  .subcat-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    line-height: 1.3;
+  }
+  .subcat-desc {
+    font-size: 0.8rem;
+    color: #667085;
+    line-height: 1.4;
+  }
+
+  /* ── Legacy simple layout (subcategory pages) ── */
   .back {
     display: inline-flex;
     align-items: center;
@@ -93,8 +371,7 @@ const safeDescription = isGarbageDesc ? "" : rawDesc;
     transition: color 0.15s;
   }
   .back:hover { color: #2563eb; }
-
-  h1 {
+  h1:not(.cat-title) {
     margin-bottom: 0.5rem;
     font-size: 1.75rem;
     font-weight: 700;
@@ -106,13 +383,12 @@ const safeDescription = isGarbageDesc ? "" : rawDesc;
     line-height: 1.5;
   }
 
+  /* ── Product grid ── */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1.5rem;
   }
-
-  /* ── Card ── */
   .card {
     display: flex;
     flex-direction: column;
@@ -128,8 +404,6 @@ const safeDescription = isGarbageDesc ? "" : rawDesc;
     transform: translateY(-4px);
     box-shadow: 0 12px 32px rgba(30, 58, 95, 0.12);
   }
-
-  /* ── Image area ── */
   .card-img-wrap {
     background: #f8fafc;
     overflow: hidden;
@@ -151,8 +425,6 @@ const safeDescription = isGarbageDesc ? "" : rawDesc;
     height: 180px;
     background: #e8edf3;
   }
-
-  /* ── Info ── */
   .info {
     flex: 1;
     display: flex;
@@ -178,8 +450,6 @@ const safeDescription = isGarbageDesc ? "" : rawDesc;
     color: #1e3a5f;
     margin: 0 0 0.75rem 0;
   }
-
-  /* ── CTA ── */
   .card-cta {
     display: inline-flex;
     align-items: center;
@@ -192,5 +462,11 @@ const safeDescription = isGarbageDesc ? "" : rawDesc;
   .card:hover .card-cta {
     color: #2d5a8e;
     gap: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .cat-banner { min-height: 240px; }
+    .cat-title { max-width: 85%; }
+    .cat-slogan { max-width: 85%; }
   }
 </style>
