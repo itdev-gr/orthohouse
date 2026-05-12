@@ -38,7 +38,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Health & Medical Devices",
     handle: "health-medical-devices", // TODO(shopify)
     slogan: "Trusted devices for home",
-    banner: { titlePosition: "bottom-left", accent: "#0f766e" },
+    banner: { image: "/images/categories/health-medical-devices.webp", titlePosition: "bottom-left", accent: "#0f766e" },
     children: [
       { label: "Winix - Air Purifiers", handle: "purifiers" },
       { label: "Oxygen", handle: "oxygen" }, // TODO(shopify)
@@ -49,7 +49,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Kybun Shoes & Mats",
     handle: "kybun-shoes",
     slogan: "Walk on air, all day",
-    banner: { titlePosition: "top-left", accent: "#334155" },
+    banner: { image: "/images/categories/kybun-shoes.webp", titlePosition: "top-left", accent: "#334155" },
     children: [
       { label: "Men's Shoes", handle: "kybun-mens-shoes" }, // TODO(shopify)
       { label: "Women's Shoes", handle: "kybun-womens-shoes" }, // TODO(shopify)
@@ -60,7 +60,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Orthopaedics",
     handle: "orthopedic-braces-supports",
     slogan: "Support, relief, recovery",
-    banner: { titlePosition: "bottom-left", accent: "#1e3a5f" },
+    banner: { image: "/images/categories/orthopedics.webp", titlePosition: "bottom-left", accent: "#1e3a5f" },
     children: [
       { label: "Neck", handle: "cervical" },
       { label: "Back & Lumbar", handle: "back-lumbar" }, // TODO(shopify) – consolidate: lumbar + trunk-lumbar-supports + thoracic
@@ -77,7 +77,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Home Care & Daily Living",
     handle: "home-care-daily-living", // TODO(shopify)
     slogan: "Independence at home",
-    banner: { titlePosition: "bottom-right", accent: "#7c3aed" },
+    banner: { image: "/images/categories/home-care.webp", titlePosition: "bottom-right", accent: "#7c3aed" },
     children: [
       { label: "Hospital Beds", handle: "hospital-beds" },
       { label: "Bathroom", handle: "bathroom-aids" },
@@ -89,7 +89,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Health & Comfort",
     handle: "health-comfort", // TODO(shopify) – or reuse existing "exercise-and-well-being"
     slogan: "Rest, recover, feel better",
-    banner: { titlePosition: "top-right", accent: "#0369a1" },
+    banner: { image: "/images/categories/health-comfort.webp", titlePosition: "top-right", accent: "#0369a1" },
     children: [
       { label: "Pillows & Cushions", handle: "pillows-and-cushions" },
       { label: "Exercise Equipment", handle: "exercise-equipment" }, // TODO(shopify)
@@ -101,7 +101,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Sensory Rooms",
     handle: "sensory-rooms", // TODO(shopify)
     slogan: "Calming spaces, tailored therapy",
-    banner: { titlePosition: "bottom-left", accent: "#be185d" },
+    banner: { image: "/images/categories/sensory-rooms.webp", titlePosition: "bottom-left", accent: "#be185d" },
     children: [
       { label: "Products", handle: "sensory-rooms-products" }, // TODO(shopify)
       { label: "Complete Solutions", handle: "sensory-rooms-solutions" }, // TODO(shopify)
@@ -111,7 +111,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Lifting Solutions",
     handle: "lifting-solutions", // TODO(shopify)
     slogan: "Safe transfers, accessible homes",
-    banner: { titlePosition: "bottom-left", accent: "#b45309" },
+    banner: { image: "/images/categories/lifting-solutions.webp", titlePosition: "bottom-left", accent: "#b45309" },
     children: [
       { label: "Orthostats", handle: "orthostats" }, // TODO(shopify)
       { label: "Patient Lifting Hoists", handle: "patient-lifters-hoists" },
@@ -123,7 +123,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Walking Aids",
     handle: "walking-aids",
     slogan: "Confident steps, every day",
-    banner: { titlePosition: "top-left", accent: "#047857" },
+    banner: { image: "/images/categories/walking-aids.webp", titlePosition: "top-left", accent: "#047857" },
     children: [
       { label: "Rollators & Walkers", handle: "rollators" },
       { label: "Crutches", handle: "crutches" },
@@ -134,7 +134,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "Wheelchairs",
     handle: "wheelchairs", // TODO(shopify) – or reuse "wheelchairs-and-home-care-aids"
     slogan: "Mobility without compromise",
-    banner: { titlePosition: "bottom-right", accent: "#374151" },
+    banner: { image: "/images/categories/wheelchairs.webp", titlePosition: "bottom-right", accent: "#374151" },
     children: [
       { label: "Manual Wheelchairs", handle: "manual-wheelchairs" },
       { label: "Electric Wheelchairs", handle: "wheelchairs-1" },
