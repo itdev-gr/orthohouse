@@ -74,15 +74,15 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/sponaplast.svg", alt: "Sponaplast" },
     ],
     children: [
-      { label: "Neck", handle: "cervical" },
-      { label: "Back & Lumbar", handle: "back-lumbar" }, // TODO(shopify) – consolidate: lumbar + trunk-lumbar-supports + thoracic
-      { label: "Knee", handle: "knee" },
-      { label: "Hip", handle: "hip" },
-      { label: "Wrist & Thumb", handle: "wrist-thumb-supports" },
-      { label: "Ankle", handle: "ankle" },
-      { label: "Elbow", handle: "elbow" },
-      { label: "Hand", handle: "hand" },
-      { label: "Head", handle: "head" },
+      { label: "Neck", handle: "cervical", icon: "/images/subcategories/neck.svg", description: "Cervical collars and neck supports" },
+      { label: "Back & Lumbar", handle: "back-lumbar", icon: "/images/subcategories/back.svg", description: "Lumbar belts and posture braces" }, // TODO(shopify) – consolidate
+      { label: "Knee", handle: "knee", icon: "/images/subcategories/knee.svg", description: "Knee braces, sleeves, stabilizers" },
+      { label: "Hip", handle: "hip", icon: "/images/subcategories/hip.svg", description: "Hip braces and post-surgery supports" },
+      { label: "Wrist & Thumb", handle: "wrist-thumb-supports", icon: "/images/subcategories/wrist.svg", description: "Wrist splints and thumb stabilizers" },
+      { label: "Ankle", handle: "ankle", icon: "/images/subcategories/ankle.svg", description: "Ankle braces and sprain supports" },
+      { label: "Elbow", handle: "elbow", icon: "/images/subcategories/elbow.svg", description: "Elbow braces and tennis-elbow straps" },
+      { label: "Hand", handle: "hand", icon: "/images/subcategories/hand.svg", description: "Hand splints and finger supports" },
+      { label: "Head", handle: "head", icon: "/images/subcategories/head.svg", description: "Helmets and protective head supports" },
     ],
   },
   {
