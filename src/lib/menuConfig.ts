@@ -157,9 +157,9 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/alimed.svg", alt: "AliMed", href: "https://www.alimed.com" },
     ],
     children: [
-      { label: "Rollators & Walkers", handle: "rollators" },
-      { label: "Crutches", handle: "crutches" },
-      { label: "Canes & Walking Sticks", handle: "canes" },
+      { label: "Rollators & Walkers", handle: "rollators", icon: "/images/subcategories/rollators.svg", description: "Wheeled support for confident daily mobility" },
+      { label: "Crutches", handle: "crutches", icon: "/images/subcategories/crutches.svg", description: "Underarm and forearm crutches for recovery" },
+      { label: "Canes & Walking Sticks", handle: "canes", icon: "/images/subcategories/canes.svg", description: "Lightweight canes for everyday balance" },
     ],
   },
   {
