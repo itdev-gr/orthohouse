@@ -420,7 +420,7 @@ function shopifyThumb(url: string, w = 300) {
                   aria-expanded="false"
                   aria-controls={`drawer-children-${i}`}
                 >
-                  <svg class="drawer-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="15" height="15">
+                  <svg class="drawer-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" width="16" height="16">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                   </svg>
                 </button>
@@ -1424,11 +1424,12 @@ function shopifyThumb(url: string, w = 300) {
   }
   .drawer-chevron {
     flex-shrink: 0;
-    color: #1e3a5f;
+    color: #0a0a0a;
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s;
   }
   .drawer-toggle.is-expanded .drawer-chevron {
     transform: rotate(90deg);
+    color: #0a0a0a;
   }
 
   /* Sub-links (children) */
