@@ -44,9 +44,9 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/lifevac.svg", alt: "LifeVac" }, // TODO(content)
     ],
     children: [
-      { label: "Winix - Air Purifiers", handle: "purifiers" },
-      { label: "Oxygen", handle: "oxygen" }, // TODO(shopify)
-      { label: "LifeVac - Antichocking Device", handle: "lifevac" }, // TODO(shopify)
+      { label: "Winix - Air Purifiers", handle: "purifiers", icon: "/images/subcategories/air-purifier.svg", description: "True-HEPA air purifiers for home and clinic" },
+      { label: "Oxygen", handle: "oxygen", icon: "/images/subcategories/oxygen.svg", description: "Concentrators and supplemental oxygen units" }, // TODO(shopify)
+      { label: "LifeVac - Antichocking Device", handle: "lifevac", icon: "/images/subcategories/lifevac.svg", description: "Non-powered choking rescue device" }, // TODO(shopify)
     ],
   },
   {
@@ -58,9 +58,9 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/kybun.svg", alt: "kybun" },
     ],
     children: [
-      { label: "Men's Shoes", handle: "kybun-mens-shoes" }, // TODO(shopify)
-      { label: "Women's Shoes", handle: "kybun-womens-shoes" }, // TODO(shopify)
-      { label: "Mats", handle: "kybun-mats" }, // TODO(shopify)
+      { label: "Men's Shoes", handle: "kybun-mens-shoes", icon: "/images/subcategories/mens-shoes.svg", description: "Air-cushioned men's footwear" }, // TODO(shopify)
+      { label: "Women's Shoes", handle: "kybun-womens-shoes", icon: "/images/subcategories/womens-shoes.svg", description: "Air-cushioned women's footwear" }, // TODO(shopify)
+      { label: "Mats", handle: "kybun-mats", icon: "/images/subcategories/mats.svg", description: "Active-standing therapy mats" }, // TODO(shopify)
     ],
   },
   {
@@ -95,10 +95,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/etac.svg", alt: "Etac" }, // TODO(content)
     ],
     children: [
-      { label: "Hospital Beds", handle: "hospital-beds" },
-      { label: "Bathroom", handle: "bathroom-aids" },
-      { label: "Toilet Aids", handle: "toilets-aids" },
-      { label: "Decubitus Prevention", handle: "decubitus-aids" },
+      { label: "Hospital Beds", handle: "hospital-beds", icon: "/images/subcategories/hospital-bed.svg", description: "Adjustable beds for home and care" },
+      { label: "Bathroom", handle: "bathroom-aids", icon: "/images/subcategories/bathroom.svg", description: "Shower seats, grab bars, bath aids" },
+      { label: "Toilet Aids", handle: "toilets-aids", icon: "/images/subcategories/toilet-aids.svg", description: "Raised seats and toilet frames" },
+      { label: "Decubitus Prevention", handle: "decubitus-aids", icon: "/images/subcategories/decubitus.svg", description: "Pressure-relief mattresses and cushions" },
     ],
   },
   {
@@ -111,10 +111,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/beurer.svg", alt: "Beurer" }, // TODO(content)
     ],
     children: [
-      { label: "Pillows & Cushions", handle: "pillows-and-cushions" },
-      { label: "Exercise Equipment", handle: "exercise-equipment" }, // TODO(shopify)
-      { label: "Massage Equipment", handle: "massage-equipment" }, // TODO(shopify)
-      { label: "Hot & Cold Therapy", handle: "hot-cold-therapy" },
+      { label: "Pillows & Cushions", handle: "pillows-and-cushions", icon: "/images/subcategories/pillow.svg", description: "Posture and recovery cushions" },
+      { label: "Exercise Equipment", handle: "exercise-equipment", icon: "/images/subcategories/exercise.svg", description: "Rehab and at-home fitness gear" }, // TODO(shopify)
+      { label: "Massage Equipment", handle: "massage-equipment", icon: "/images/subcategories/massage.svg", description: "Handheld and seat massagers" }, // TODO(shopify)
+      { label: "Hot & Cold Therapy", handle: "hot-cold-therapy", icon: "/images/subcategories/hot-cold.svg", description: "Pain-relief packs and wraps" },
     ],
   },
   {
@@ -126,8 +126,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/rompa.svg", alt: "Rompa" }, // TODO(content)
     ],
     children: [
-      { label: "Products", handle: "sensory-rooms-products" }, // TODO(shopify)
-      { label: "Complete Solutions", handle: "sensory-rooms-solutions" }, // TODO(shopify)
+      { label: "Products", handle: "sensory-rooms-products", icon: "/images/subcategories/sensory-products.svg", description: "Individual sensory components" }, // TODO(shopify)
+      { label: "Complete Solutions", handle: "sensory-rooms-solutions", icon: "/images/subcategories/sensory-solutions.svg", description: "Full sensory-room installations" }, // TODO(shopify)
     ],
   },
   {
@@ -140,10 +140,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/molift.svg", alt: "Molift" }, // TODO(content)
     ],
     children: [
-      { label: "Orthostats", handle: "orthostats" }, // TODO(shopify)
-      { label: "Patient Lifting Hoists", handle: "patient-lifters-hoists" },
-      { label: "Stair Lifts by Lehner", handle: "stair-lifts-lehner" }, // TODO(shopify)
-      { label: "Lifting Platforms by Lehner", handle: "lifting-platforms-lehner" }, // TODO(shopify)
+      { label: "Orthostats", handle: "orthostats", icon: "/images/subcategories/orthostat.svg", description: "Standing frames for upright therapy" }, // TODO(shopify)
+      { label: "Patient Lifting Hoists", handle: "patient-lifters-hoists", icon: "/images/subcategories/lifting-hoist.svg", description: "Mobile and ceiling-track hoists" },
+      { label: "Stair Lifts by Lehner", handle: "stair-lifts-lehner", icon: "/images/subcategories/stair-lift.svg", description: "Straight and curved stair lifts" }, // TODO(shopify)
+      { label: "Lifting Platforms by Lehner", handle: "lifting-platforms-lehner", icon: "/images/subcategories/lifting-platform.svg", description: "Vertical home-access platforms" }, // TODO(shopify)
     ],
   },
   {
@@ -173,8 +173,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/invacare.svg", alt: "Invacare" }, // TODO(content)
     ],
     children: [
-      { label: "Manual Wheelchairs", handle: "manual-wheelchairs" },
-      { label: "Electric Wheelchairs", handle: "wheelchairs-1" },
+      { label: "Manual Wheelchairs", handle: "manual-wheelchairs", icon: "/images/subcategories/manual-wheelchair.svg", description: "Lightweight and transport chairs" },
+      { label: "Electric Wheelchairs", handle: "wheelchairs-1", icon: "/images/subcategories/electric-wheelchair.svg", description: "Powered indoor and outdoor chairs" },
     ],
   },
 ];
