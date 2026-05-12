@@ -39,6 +39,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "health-medical-devices", // TODO(shopify)
     slogan: "Trusted devices for home",
     banner: { image: "/images/categories/health-medical-devices.webp", titlePosition: "bottom-left", accent: "#0f766e" },
+    supplierLogos: [
+      { src: "/images/suppliers/winix.svg", alt: "Winix" }, // TODO(content)
+      { src: "/images/suppliers/lifevac.svg", alt: "LifeVac" }, // TODO(content)
+    ],
     children: [
       { label: "Winix - Air Purifiers", handle: "purifiers" },
       { label: "Oxygen", handle: "oxygen" }, // TODO(shopify)
@@ -50,6 +54,9 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "kybun-shoes",
     slogan: "Walk on air, all day",
     banner: { image: "/images/categories/kybun-shoes.webp", titlePosition: "top-left", accent: "#334155" },
+    supplierLogos: [
+      { src: "/images/suppliers/kybun.svg", alt: "kybun" },
+    ],
     children: [
       { label: "Men's Shoes", handle: "kybun-mens-shoes" }, // TODO(shopify)
       { label: "Women's Shoes", handle: "kybun-womens-shoes" }, // TODO(shopify)
@@ -61,6 +68,11 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "orthopedic-braces-supports",
     slogan: "Support, relief, recovery",
     banner: { image: "/images/categories/orthopedics.webp", titlePosition: "bottom-left", accent: "#1e3a5f" },
+    supplierLogos: [
+      { src: "/images/suppliers/bauerfeind.svg", alt: "Bauerfeind" }, // TODO(content)
+      { src: "/images/suppliers/donjoy.svg", alt: "DonJoy" }, // TODO(content)
+      { src: "/images/suppliers/sponaplast.svg", alt: "Sponaplast" },
+    ],
     children: [
       { label: "Neck", handle: "cervical" },
       { label: "Back & Lumbar", handle: "back-lumbar" }, // TODO(shopify) – consolidate: lumbar + trunk-lumbar-supports + thoracic
@@ -78,6 +90,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "home-care-daily-living", // TODO(shopify)
     slogan: "Independence at home",
     banner: { image: "/images/categories/home-care.webp", titlePosition: "bottom-right", accent: "#7c3aed" },
+    supplierLogos: [
+      { src: "/images/suppliers/invacare.svg", alt: "Invacare" }, // TODO(content)
+      { src: "/images/suppliers/etac.svg", alt: "Etac" }, // TODO(content)
+    ],
     children: [
       { label: "Hospital Beds", handle: "hospital-beds" },
       { label: "Bathroom", handle: "bathroom-aids" },
@@ -90,6 +106,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "health-comfort", // TODO(shopify) – or reuse existing "exercise-and-well-being"
     slogan: "Rest, recover, feel better",
     banner: { image: "/images/categories/health-comfort.webp", titlePosition: "top-right", accent: "#0369a1" },
+    supplierLogos: [
+      { src: "/images/suppliers/medisana.svg", alt: "Medisana" }, // TODO(content)
+      { src: "/images/suppliers/beurer.svg", alt: "Beurer" }, // TODO(content)
+    ],
     children: [
       { label: "Pillows & Cushions", handle: "pillows-and-cushions" },
       { label: "Exercise Equipment", handle: "exercise-equipment" }, // TODO(shopify)
@@ -102,6 +122,9 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "sensory-rooms", // TODO(shopify)
     slogan: "Calming spaces, tailored therapy",
     banner: { image: "/images/categories/sensory-rooms.webp", titlePosition: "bottom-left", accent: "#be185d" },
+    supplierLogos: [
+      { src: "/images/suppliers/rompa.svg", alt: "Rompa" }, // TODO(content)
+    ],
     children: [
       { label: "Products", handle: "sensory-rooms-products" }, // TODO(shopify)
       { label: "Complete Solutions", handle: "sensory-rooms-solutions" }, // TODO(shopify)
@@ -112,6 +135,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "lifting-solutions", // TODO(shopify)
     slogan: "Safe transfers, accessible homes",
     banner: { image: "/images/categories/lifting-solutions.webp", titlePosition: "bottom-left", accent: "#b45309" },
+    supplierLogos: [
+      { src: "/images/suppliers/lehner.svg", alt: "Lehner" },
+      { src: "/images/suppliers/molift.svg", alt: "Molift" }, // TODO(content)
+    ],
     children: [
       { label: "Orthostats", handle: "orthostats" }, // TODO(shopify)
       { label: "Patient Lifting Hoists", handle: "patient-lifters-hoists" },
@@ -140,6 +167,11 @@ export const NAV_CATEGORIES: NavCategory[] = [
     handle: "wheelchairs", // TODO(shopify) – or reuse "wheelchairs-and-home-care-aids"
     slogan: "Mobility without compromise",
     banner: { image: "/images/categories/wheelchairs.webp", titlePosition: "bottom-right", accent: "#374151" },
+    supplierLogos: [
+      { src: "/images/suppliers/permobil.svg", alt: "Permobil" }, // TODO(content)
+      { src: "/images/suppliers/ottobock.svg", alt: "Ottobock" }, // TODO(content)
+      { src: "/images/suppliers/invacare.svg", alt: "Invacare" }, // TODO(content)
+    ],
     children: [
       { label: "Manual Wheelchairs", handle: "manual-wheelchairs" },
       { label: "Electric Wheelchairs", handle: "wheelchairs-1" },
