@@ -37,7 +37,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
   {
     label: "Health & Medical Devices",
     handle: "health-medical-devices", // TODO(shopify)
-    slogan: "Clinically trusted devices for the home",
+    slogan: "Trusted devices for home",
     banner: { titlePosition: "bottom-left", accent: "#0f766e" },
     children: [
       { label: "Winix - Air Purifiers", handle: "purifiers" },
@@ -48,7 +48,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
   {
     label: "Kybun Shoes & Mats",
     handle: "kybun-shoes",
-    slogan: "Walk on air, all day long",
+    slogan: "Walk on air, all day",
     banner: { titlePosition: "top-left", accent: "#334155" },
     children: [
       { label: "Men's Shoes", handle: "kybun-mens-shoes" }, // TODO(shopify)
