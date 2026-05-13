@@ -1,15 +1,19 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { pickLang } from "../../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const isEl = lang === "el";
 ---
 
-<Layout title="Shipping & Delivery – OrthoHouse Cyprus">
+<Layout title={isEl ? "Αποστολή & Παράδοση – OrthoHouse Cyprus" : "Shipping & Delivery – OrthoHouse Cyprus"}>
   <div class="sd-wrapper">
 
     <!-- Hero banner -->
     <div class="sd-hero">
       <div class="sd-hero-inner">
-<h1 class="sd-title">Shipping &amp; Delivery</h1>
-        <p class="sd-tagline">Fast, reliable delivery across Cyprus and Europe</p>
+<h1 class="sd-title">{isEl ? "Αποστολή & Παράδοση" : "Shipping & Delivery"}</h1>
+        <p class="sd-tagline">{isEl ? "Γρήγορη, αξιόπιστη παράδοση σε Κύπρο και Ευρώπη" : "Fast, reliable delivery across Cyprus and Europe"}</p>
       </div>
     </div>
 
@@ -19,10 +23,12 @@ import Layout from "../../layouts/Layout.astro";
       <!-- Cyprus section -->
       <section class="sd-section">
         <div class="sd-section-text">
-          <h2>Cyprus</h2>
+          <h2>{isEl ? "Κύπρος" : "Cyprus"}</h2>
           <p>
-            We ship our products by <strong>ACS courier</strong> to all cities in Cyprus.
-            Deliveries are made to homes except for limited service areas defined by ACS.
+            {isEl
+              ? <>Αποστέλλουμε τα προϊόντα μας μέσω <strong>courier ACS</strong> σε όλες τις πόλεις της Κύπρου. Οι παραδόσεις πραγματοποιούνται στις διευθύνσεις των πελατών, εκτός από περιορισμένες περιοχές που ορίζει η ACS.</>
+              : <>We ship our products by <strong>ACS courier</strong> to all cities in Cyprus. Deliveries are made to homes except for limited service areas defined by ACS.</>
+            }
           </p>
         </div>
         <div class="sd-cards">
@@ -32,8 +38,11 @@ import Layout from "../../layouts/Layout.astro";
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
               </svg>
             </div>
-            <h3>Delivery Time</h3>
-            <p>Within <strong>3 working days</strong> of placing your order</p>
+            <h3>{isEl ? "Χρόνος Παράδοσης" : "Delivery Time"}</h3>
+            <p>{isEl
+              ? <>Εντός <strong>3 εργάσιμων ημερών</strong> από την υποβολή της παραγγελίας</>
+              : <>Within <strong>3 working days</strong> of placing your order</>
+            }</p>
           </div>
           <div class="sd-card">
             <div class="sd-card-icon sd-card-icon--green">
@@ -41,8 +50,11 @@ import Layout from "../../layouts/Layout.astro";
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
             </div>
-            <h3>Free Shipping</h3>
-            <p>Shipping in Cyprus is <strong>free of charge</strong> for all orders</p>
+            <h3>{isEl ? "Δωρεάν Αποστολή" : "Free Shipping"}</h3>
+            <p>{isEl
+              ? <>Η αποστολή εντός Κύπρου είναι <strong>δωρεάν</strong> για όλες τις παραγγελίες</>
+              : <>Shipping in Cyprus is <strong>free of charge</strong> for all orders</>
+            }</p>
           </div>
           <div class="sd-card">
             <div class="sd-card-icon">
@@ -51,8 +63,8 @@ import Layout from "../../layouts/Layout.astro";
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
               </svg>
             </div>
-            <h3>ACS Courier</h3>
-            <p>Delivered to your home across all cities in Cyprus</p>
+            <h3>{isEl ? "Courier ACS" : "ACS Courier"}</h3>
+            <p>{isEl ? "Παράδοση στο σπίτι σας σε όλες τις πόλεις της Κύπρου" : "Delivered to your home across all cities in Cyprus"}</p>
           </div>
         </div>
       </section>
@@ -62,18 +74,19 @@ import Layout from "../../layouts/Layout.astro";
       <!-- International section -->
       <section class="sd-section">
         <div class="sd-section-text">
-          <h2>International</h2>
+          <h2>{isEl ? "Διεθνώς" : "International"}</h2>
           <p>
-            We currently provide delivery through the <strong>Postal Service</strong> at a flat rate of
-            <strong>€15 per order</strong> to the following countries:
+            {isEl
+              ? <>Παρέχουμε παράδοση μέσω της <strong>Ταχυδρομικής Υπηρεσίας</strong> σε ενιαία χρέωση <strong>€15 ανά παραγγελία</strong> στις παρακάτω χώρες:</>
+              : <>We currently provide delivery through the <strong>Postal Service</strong> at a flat rate of <strong>€15 per order</strong> to the following countries:</>
+            }
           </p>
         </div>
         <div class="sd-countries">
-          Andorra, Austria, Belgium, Bulgaria, Croatia, Czech Republic, Denmark, Estonia,
-          Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy, Latvia,
-          Liechtenstein, Lithuania, Luxembourg, Malta, Monaco, Netherlands, Norway, Poland,
-          Portugal, Romania, San Marino, Slovakia, Slovenia, Spain, Sweden, Switzerland,
-          UK, Vatican.
+          {isEl
+            ? "Ανδόρα, Αυστρία, Βέλγιο, Βουλγαρία, Κροατία, Τσεχία, Δανία, Εσθονία, Φινλανδία, Γαλλία, Γερμανία, Ελλάδα, Ουγγαρία, Ισλανδία, Ιρλανδία, Ιταλία, Λετονία, Λιχτενστάιν, Λιθουανία, Λουξεμβούργο, Μάλτα, Μονακό, Ολλανδία, Νορβηγία, Πολωνία, Πορτογαλία, Ρουμανία, Άγιος Μαρίνος, Σλοβακία, Σλοβενία, Ισπανία, Σουηδία, Ελβετία, Ηνωμένο Βασίλειο, Βατικανό."
+            : "Andorra, Austria, Belgium, Bulgaria, Croatia, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Monaco, Netherlands, Norway, Poland, Portugal, Romania, San Marino, Slovakia, Slovenia, Spain, Sweden, Switzerland, UK, Vatican."
+          }
         </div>
       </section>
 
@@ -82,39 +95,57 @@ import Layout from "../../layouts/Layout.astro";
       <!-- More information section -->
       <section class="sd-section">
         <div class="sd-section-text">
-          <h2>More Information</h2>
-          <p>Our Distribution Centres do not dispatch over <strong>weekends</strong> (Saturday and Sunday).</p>
+          <h2>{isEl ? "Περισσότερες Πληροφορίες" : "More Information"}</h2>
+          <p>{isEl
+            ? <>Τα Κέντρα Διανομής μας δεν αποστέλλουν τα <strong>σαββατοκύριακα</strong> (Σάββατο και Κυριακή).</>
+            : <>Our Distribution Centres do not dispatch over <strong>weekends</strong> (Saturday and Sunday).</>
+          }</p>
         </div>
         <ul class="sd-info-list">
           <li>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
-            <span>Although we use all reasonable means to ensure timely delivery, we cannot accept responsibility for late deliveries due to circumstances outside of our control. We will do our best to inform you of any unexpected delay.</span>
+            <span>{isEl
+              ? "Παρόλο που χρησιμοποιούμε όλα τα εύλογα μέσα για να διασφαλίσουμε την έγκαιρη παράδοση, δεν μπορούμε να αναλάβουμε ευθύνη για καθυστερήσεις λόγω συνθηκών εκτός ελέγχου μας. Θα κάνουμε το καλύτερο δυνατό για να σας ενημερώσουμε για κάθε απρόσμενη καθυστέρηση."
+              : "Although we use all reasonable means to ensure timely delivery, we cannot accept responsibility for late deliveries due to circumstances outside of our control. We will do our best to inform you of any unexpected delay."
+            }</span>
           </li>
           <li>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
-            <span>Some delays may occur depending on the destination country and this is not possible to be controlled by us. In case of delay please contact your local post office and provide them with your tracking number.</span>
+            <span>{isEl
+              ? "Ενδέχεται να υπάρξουν καθυστερήσεις ανάλογα με τη χώρα προορισμού — αυτό δεν ελέγχεται από εμάς. Σε περίπτωση καθυστέρησης παρακαλούμε επικοινωνήστε με το τοπικό σας ταχυδρομείο και δώστε τον αριθμό παρακολούθησης."
+              : "Some delays may occur depending on the destination country and this is not possible to be controlled by us. In case of delay please contact your local post office and provide them with your tracking number."
+            }</span>
           </li>
           <li>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
-            <span>If you are not in when your parcel arrives, the carrier will leave a card telling you where it is — either left in a safe place or with details on how to pick up your order or rearrange delivery.</span>
+            <span>{isEl
+              ? "Αν δεν είστε στο σπίτι όταν φτάσει το δέμα σας, ο μεταφορέας θα αφήσει σημείωμα με οδηγίες για το πού βρίσκεται — είτε αφημένο σε ασφαλές μέρος ή με λεπτομέρειες για παραλαβή ή νέα παράδοση."
+              : "If you are not in when your parcel arrives, the carrier will leave a card telling you where it is — either left in a safe place or with details on how to pick up your order or rearrange delivery."
+            }</span>
           </li>
           <li>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
-            <span>On any public holiday dates in your country, deliveries will not be made. Please expect your order to arrive the next business day.</span>
+            <span>{isEl
+              ? "Σε επίσημες αργίες της χώρας σας δεν γίνονται παραδόσεις. Αναμένετε την παραγγελία σας την επόμενη εργάσιμη ημέρα."
+              : "On any public holiday dates in your country, deliveries will not be made. Please expect your order to arrive the next business day."
+            }</span>
           </li>
           <li>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
-            <span>Please be aware that customers are <strong>responsible for payment of any local customs duties</strong>.</span>
+            <span>{isEl
+              ? <>Παρακαλώ σημειώστε ότι οι πελάτες είναι <strong>υπεύθυνοι για την καταβολή τυχόν τοπικών τελωνειακών δασμών</strong>.</>
+              : <>Please be aware that customers are <strong>responsible for payment of any local customs duties</strong>.</>
+            }</span>
           </li>
         </ul>
       </section>
@@ -124,9 +155,12 @@ import Layout from "../../layouts/Layout.astro";
       <!-- Contact section -->
       <section class="sd-section">
         <div class="sd-section-text">
-          <h2>Further Enquiries</h2>
+          <h2>{isEl ? "Περαιτέρω Πληροφορίες" : "Further Enquiries"}</h2>
           <p>
-            If you would like to further inquire about our shipping information, please contact us:
+            {isEl
+              ? "Αν θέλετε περαιτέρω διευκρινίσεις για την αποστολή, επικοινωνήστε μαζί μας:"
+              : "If you would like to further inquire about our shipping information, please contact us:"
+            }
           </p>
         </div>
         <a href="mailto:info@orthohouse.com.cy" class="sd-email-link">

@@ -1,3 +1,101 @@
+# Find Us Page Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Create a "Find Us" page at `/pages/find-us` that matches the layout/design of healthyshoes.com.cy/find-us/, and make the footer "Limassol, Cyprus" text a clickable link to it.
+
+**Architecture:** New Astro page following existing `/pages/pages/*.astro` pattern. Add i18n keys for bilingual support. Modify footer in Layout.astro to wrap the address in a link. Page contains: Google Maps embed, address box, Get Directions links (Google Maps / Waze / 2GIS), opening hours table, call us card, email card.
+
+**Tech Stack:** Astro, CSS (scoped), Google Maps embed iframe, i18n (existing system)
+
+---
+
+### Task 1: Add i18n translation keys
+
+**Files:**
+- Modify: `src/i18n/ui.ts:38-39` (EN block) and `src/i18n/ui.ts:135-136` (EL block)
+
+- [ ] **Step 1: Add EN translation keys for the Find Us page**
+
+In `src/i18n/ui.ts`, add these keys after the `"footer.address"` line inside the `en` block:
+
+```typescript
+"nav.findUs": "Find Us",
+```
+
+And in the same `en` block, after the `"shippingDelivery.title"` key:
+
+```typescript
+"findUs.title": "Find Us",
+"findUs.subtitle": "Pay us a visit to try how it feels to walk on air!",
+"findUs.address.heading": "ADDRESS",
+"findUs.address.line1": "Limassol",
+"findUs.address.line2": "Cyprus",
+"findUs.directions.heading": "GET DIRECTIONS",
+"findUs.hours.heading": "OPENING HOURS",
+"findUs.hours.closed": "Closed",
+"findUs.hours.opensAt": "Opens at 09:00",
+"findUs.hours.monday": "Monday",
+"findUs.hours.tuesday": "Tuesday",
+"findUs.hours.wednesday": "Wednesday",
+"findUs.hours.thursday": "Thursday",
+"findUs.hours.friday": "Friday",
+"findUs.hours.saturday": "Saturday",
+"findUs.hours.sunday": "Sunday",
+"findUs.callUs": "CALL US",
+"findUs.email": "EMAIL",
+```
+
+- [ ] **Step 2: Add EL translation keys**
+
+In the `el` block, add matching keys:
+
+```typescript
+"nav.findUs": "Βρείτε μας",
+```
+
+And after `"shippingDelivery.title"`:
+
+```typescript
+"findUs.title": "Βρείτε μας",
+"findUs.subtitle": "Επισκεφτείτε μας για να δοκιμάσετε πώς είναι να περπατάτε στον αέρα!",
+"findUs.address.heading": "ΔΙΕΥΘΥΝΣΗ",
+"findUs.address.line1": "Λεμεσός",
+"findUs.address.line2": "Κύπρος",
+"findUs.directions.heading": "ΟΔΗΓΙΕΣ",
+"findUs.hours.heading": "ΩΡΑΡΙΟ ΛΕΙΤΟΥΡΓΙΑΣ",
+"findUs.hours.closed": "Κλειστά",
+"findUs.hours.opensAt": "Ανοίγει στις 09:00",
+"findUs.hours.monday": "Δευτέρα",
+"findUs.hours.tuesday": "Τρίτη",
+"findUs.hours.wednesday": "Τετάρτη",
+"findUs.hours.thursday": "Πέμπτη",
+"findUs.hours.friday": "Παρασκευή",
+"findUs.hours.saturday": "Σάββατο",
+"findUs.hours.sunday": "Κυριακή",
+"findUs.callUs": "ΚΑΛΕΣΤΕ ΜΑΣ",
+"findUs.email": "EMAIL",
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/i18n/ui.ts
+git commit -m "feat(i18n): add Find Us page translation keys"
+```
+
+---
+
+### Task 2: Create the Find Us page
+
+**Files:**
+- Create: `src/pages/pages/find-us.astro`
+
+- [ ] **Step 1: Create the Find Us page file**
+
+Create `src/pages/pages/find-us.astro` with the full page markup. The page layout copies healthyshoes.com.cy/find-us/ exactly:
+
+```astro
 ---
 import Layout from "../../layouts/Layout.astro";
 import { pickLang, useTranslations } from "../../i18n/utils";
@@ -24,14 +122,14 @@ const t = useTranslations(lang);
         <!-- Left: Map -->
         <div class="fu-map">
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1630.2!2d33.3309487!3d35.1648933!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14de1a04a9f6b5bf%3A0xaf58fe2975df504f!2sO.H.OrthoHouse%20Ltd!5e0!3m2!1sen!2scy!4v1705500000000"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3271.5!2d33.0401!3d34.6841!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14e733e1c8e53c69%3A0x0!2sLimassol%2C+Cyprus!5e0!3m2!1sen!2scy!4v1700000000000"
             width="100%"
             height="100%"
             style="border:0;"
             allowfullscreen=""
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
-            title="OrthoHouse location"
+            title="OrthoHouse Limassol location"
           ></iframe>
         </div>
 
@@ -59,13 +157,13 @@ const t = useTranslations(lang);
           <div class="fu-directions">
             <h2 class="fu-section-heading">{t("findUs.directions.heading")}</h2>
             <div class="fu-directions-buttons">
-              <a href="https://www.google.com/maps/dir/?api=1&destination=35.1648933,33.3309487" target="_blank" rel="noopener noreferrer" class="fu-dir-btn fu-dir-google">
+              <a href="https://www.google.com/maps/dir/?api=1&destination=34.6841,33.0401" target="_blank" rel="noopener noreferrer" class="fu-dir-btn fu-dir-google">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
                 Google Maps
               </a>
-              <a href="https://waze.com/ul?ll=35.1648933,33.3309487&navigate=yes" target="_blank" rel="noopener noreferrer" class="fu-dir-btn fu-dir-waze">
+              <a href="https://waze.com/ul?ll=34.6841,33.0401&navigate=yes" target="_blank" rel="noopener noreferrer" class="fu-dir-btn fu-dir-waze">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
@@ -84,6 +182,7 @@ const t = useTranslations(lang);
             <div class="fu-card-body">
               <div class="fu-hours-header">
                 <h2 class="fu-card-heading">{t("findUs.hours.heading")}</h2>
+                <span class="fu-status-badge fu-status-closed">{t("findUs.hours.closed")}</span>
               </div>
               <p class="fu-opens-at">{t("findUs.hours.opensAt")}</p>
               <div class="fu-hours-grid">
@@ -124,14 +223,14 @@ const t = useTranslations(lang);
             </a>
           </div>
 
-        </div>
-      </div>
-    </div>
+        </div><!-- /fu-info -->
+      </div><!-- /fu-grid -->
+    </div><!-- /fu-content -->
   </div>
 </Layout>
 
 <style>
-  /* Hero Banner */
+  /* ── Hero Banner ── */
   .fu-hero {
     background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
     padding: 3.5rem 2rem;
@@ -157,7 +256,7 @@ const t = useTranslations(lang);
     margin: 0;
   }
 
-  /* Wrapper */
+  /* ── Wrapper ── */
   .fu-wrapper {
     margin: -2rem 0 0 0;
   }
@@ -167,7 +266,7 @@ const t = useTranslations(lang);
     padding: 3rem 2rem 4rem;
   }
 
-  /* Two-column grid */
+  /* ── Two-column grid: map left, info right ── */
   .fu-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -175,7 +274,7 @@ const t = useTranslations(lang);
     align-items: start;
   }
 
-  /* Map */
+  /* ── Map ── */
   .fu-map {
     border-radius: 12px;
     overflow: hidden;
@@ -190,14 +289,14 @@ const t = useTranslations(lang);
     min-height: 520px;
   }
 
-  /* Info panel */
+  /* ── Info panel ── */
   .fu-info {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
   }
 
-  /* Cards */
+  /* ── Cards (address, hours) ── */
   .fu-card {
     display: flex;
     gap: 1rem;
@@ -234,7 +333,7 @@ const t = useTranslations(lang);
     font-weight: 500;
   }
 
-  /* Get Directions */
+  /* ── Get Directions ── */
   .fu-directions {
     padding: 0.5rem 0;
   }
@@ -274,7 +373,7 @@ const t = useTranslations(lang);
     color: #1a1a1a;
   }
 
-  /* Opening Hours */
+  /* ── Opening Hours ── */
   .fu-hours-header {
     display: flex;
     align-items: center;
@@ -324,7 +423,7 @@ const t = useTranslations(lang);
     font-weight: 600;
   }
 
-  /* Contact row */
+  /* ── Contact row (Call Us + Email) ── */
   .fu-contact-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -375,7 +474,7 @@ const t = useTranslations(lang);
     color: #1e3a5f;
   }
 
-  /* Mobile */
+  /* ── Mobile ── */
   @media (max-width: 768px) {
     .fu-hero {
       padding: 2.5rem 1rem;
@@ -399,3 +498,112 @@ const t = useTranslations(lang);
     }
   }
 </style>
+```
+
+- [ ] **Step 2: Verify the page builds**
+
+Run: `npx astro build 2>&1 | tail -20`
+Expected: Build succeeds with no errors referencing find-us.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/pages/pages/find-us.astro
+git commit -m "feat: create Find Us page with map, address, hours, and contact info"
+```
+
+---
+
+### Task 3: Make footer "Limassol, Cyprus" a clickable link
+
+**Files:**
+- Modify: `src/layouts/Layout.astro:455-458`
+
+- [ ] **Step 1: Wrap the footer address text in a link**
+
+In `src/layouts/Layout.astro`, find the footer address list item (around line 455-458):
+
+```html
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>
+                {t("footer.address")}
+              </li>
+```
+
+Replace with:
+
+```html
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>
+                <a href={lp("/pages/find-us")}>{t("footer.address")}</a>
+              </li>
+```
+
+- [ ] **Step 2: Verify the footer link works**
+
+Run: `npx astro dev` and visit the site footer. Click "Limassol, Cyprus" — it should navigate to `/pages/find-us`.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/layouts/Layout.astro
+git commit -m "feat(footer): make address text link to Find Us page"
+```
+
+---
+
+### Task 4: Add "Find Us" to the footer Pages column
+
+**Files:**
+- Modify: `src/layouts/Layout.astro:476-486`
+
+- [ ] **Step 1: Add a Find Us link in the footer Pages list**
+
+In `src/layouts/Layout.astro`, find the footer Pages column (around line 476-486). Add a "Find Us" link after the "Working Hours" entry:
+
+After:
+```html
+              <li><a href={lp("/pages/working-hours")}>{t("nav.workingHours")}</a></li>
+```
+
+Add:
+```html
+              <li><a href={lp("/pages/find-us")}>{t("nav.findUs")}</a></li>
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add src/layouts/Layout.astro
+git commit -m "feat(footer): add Find Us link to pages column"
+```
+
+---
+
+### Task 5: Visual QA — verify page matches reference
+
+- [ ] **Step 1: Start dev server and navigate to the Find Us page**
+
+Run: `npx astro dev`
+Navigate to: `http://localhost:4321/pages/find-us`
+
+- [ ] **Step 2: Take full-page screenshot and compare with reference**
+
+Compare the page layout against the reference screenshot (`reference-find-us-full.png`):
+- Map is on the left, info cards on the right
+- Address card has location icon + address text
+- Get Directions row has Google Maps + Waze buttons
+- Opening Hours shows day/time grid with status badge
+- Call Us + Email are side-by-side cards at the bottom
+- Footer shows clickable "Limassol, Cyprus" linking to this page
+
+- [ ] **Step 3: Test mobile responsive layout**
+
+Resize browser to 375px width and verify:
+- Map stacks above info cards
+- Contact cards stack vertically
+- All text is readable and buttons are tappable
+
+- [ ] **Step 4: Test Greek version**
+
+Navigate to `/el/pages/find-us` and verify all text is in Greek.

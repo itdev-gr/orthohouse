@@ -1,15 +1,19 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { pickLang } from "../../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const isEl = lang === "el";
 ---
 
-<Layout title="About Us – OrthoHouse Cyprus">
+<Layout title={isEl ? "Σχετικά με Εμάς – OrthoHouse Cyprus" : "About Us – OrthoHouse Cyprus"}>
   <div class="about-wrapper">
 
     <!-- Hero banner -->
     <div class="about-hero">
       <div class="about-hero-inner">
-<h1 class="about-title">About OrthoHouse</h1>
-        <p class="about-tagline">Doing Well to Wellbeing</p>
+<h1 class="about-title">{isEl ? "Σχετικά με την OrthoHouse" : "About OrthoHouse"}</h1>
+        <p class="about-tagline">{isEl ? "Από την Υγεία στην Ευεξία" : "Doing Well to Wellbeing"}</p>
       </div>
     </div>
 
@@ -19,10 +23,11 @@ import Layout from "../../layouts/Layout.astro";
       <!-- Founding story -->
       <section class="about-section about-intro">
         <div class="about-section-text">
-          <h2>Founded in 2007</h2>
+          <h2>{isEl ? "Ιδρύθηκε το 2007" : "Founded in 2007"}</h2>
           <p>
-            OrthoHouse is a trusted, family-run provider of orthotic, rehabilitation, and medical equipment,
-            based in Engomi near Hippocrateon Private Hospital and serving customers across Cyprus and worldwide.
+            {isEl
+              ? "Η OrthoHouse είναι αξιόπιστος, οικογενειακός πάροχος ορθωτικού, αποκαταστατικού και ιατρικού εξοπλισμού, με έδρα στην Έγκωμη κοντά στο Ιδιωτικό Νοσοκομείο Ιπποκράτειον, εξυπηρετώντας πελάτες σε όλη την Κύπρο και διεθνώς."
+              : "OrthoHouse is a trusted, family-run provider of orthotic, rehabilitation, and medical equipment, based in Engomi near Hippocrateon Private Hospital and serving customers across Cyprus and worldwide."}
           </p>
         </div>
       </section>
@@ -33,11 +38,16 @@ import Layout from "../../layouts/Layout.astro";
       <!-- Mission -->
       <section class="about-section about-mission">
         <div class="about-section-text">
-          <h2>Our Mission</h2>
+          <h2>{isEl ? "Η Αποστολή μας" : "Our Mission"}</h2>
           <p>
-            We help people move better, feel better, and live with greater comfort — guided by our
-            commitment to <strong>Doing Well to Wellbeing</strong>. Every product we carry and every
-            service we offer is chosen with our customers' quality of life in mind.
+            {isEl
+              ? <>
+                  Βοηθάμε τους ανθρώπους να κινούνται καλύτερα, να νιώθουν καλύτερα και να ζουν με μεγαλύτερη άνεση — με γνώμονα τη δέσμευσή μας <strong>Από την Υγεία στην Ευεξία</strong>. Κάθε προϊόν που διαθέτουμε και κάθε υπηρεσία που προσφέρουμε επιλέγεται με γνώμονα την ποιότητα ζωής των πελατών μας.
+                </>
+              : <>
+                  We help people move better, feel better, and live with greater comfort — guided by our commitment to <strong>Doing Well to Wellbeing</strong>. Every product we carry and every service we offer is chosen with our customers' quality of life in mind.
+                </>
+            }
           </p>
         </div>
       </section>
@@ -47,19 +57,25 @@ import Layout from "../../layouts/Layout.astro";
 
       <!-- Values cards -->
       <section class="about-values">
-        <h2 class="about-values-title">What Sets Us Apart</h2>
+        <h2 class="about-values-title">{isEl ? "Τι Μας Ξεχωρίζει" : "What Sets Us Apart"}</h2>
         <div class="about-cards">
           <div class="about-card">
-            <h3>Family-Run</h3>
-            <p>A personal, caring approach to every customer interaction — because we treat our customers like family.</p>
+            <h3>{isEl ? "Οικογενειακή Επιχείρηση" : "Family-Run"}</h3>
+            <p>{isEl
+              ? "Προσωπική, στοργική προσέγγιση σε κάθε επαφή με τον πελάτη — γιατί φερόμαστε στους πελάτες μας σαν οικογένεια."
+              : "A personal, caring approach to every customer interaction — because we treat our customers like family."}</p>
           </div>
           <div class="about-card">
-            <h3>Trusted Quality</h3>
-            <p>Over 17 years of experience supplying certified orthotic, rehabilitation, and medical equipment.</p>
+            <h3>{isEl ? "Αξιόπιστη Ποιότητα" : "Trusted Quality"}</h3>
+            <p>{isEl
+              ? "Πάνω από 17 χρόνια εμπειρίας στην προμήθεια πιστοποιημένου ορθωτικού, αποκαταστατικού και ιατρικού εξοπλισμού."
+              : "Over 17 years of experience supplying certified orthotic, rehabilitation, and medical equipment."}</p>
           </div>
           <div class="about-card">
-            <h3>Cyprus & Worldwide</h3>
-            <p>Headquartered in Engomi, near Hippocrateon Private Hospital, serving customers across Cyprus and internationally.</p>
+            <h3>{isEl ? "Κύπρος & Παγκόσμια" : "Cyprus & Worldwide"}</h3>
+            <p>{isEl
+              ? "Με έδρα στην Έγκωμη, κοντά στο Ιδιωτικό Νοσοκομείο Ιπποκράτειον, εξυπηρετούμε πελάτες σε όλη την Κύπρο και διεθνώς."
+              : "Headquartered in Engomi, near Hippocrateon Private Hospital, serving customers across Cyprus and internationally."}</p>
           </div>
         </div>
       </section>

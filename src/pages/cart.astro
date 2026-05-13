@@ -1,27 +1,32 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { pickLang, localizeHref } from "../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const isEl = lang === "el";
+const lp = (p: string) => localizeHref(p, lang);
 ---
 
-<Layout title="Cart">
-  <h1 class="page-title">Your Cart</h1>
+<Layout title={isEl ? "Καλάθι" : "Cart"}>
+  <h1 class="page-title">{isEl ? "Το Καλάθι σας" : "Your Cart"}</h1>
 
-  <div id="cart-container">
+  <div id="cart-container" data-lang={lang}>
     <div id="cart-loading" class="cart-empty">
-      <p>Loading cart…</p>
+      <p>{isEl ? "Φόρτωση καλαθιού…" : "Loading cart…"}</p>
     </div>
     <div id="cart-empty" class="cart-empty" style="display:none">
-      <p>Your cart is empty.</p>
-      <a href="/" class="continue-link">&larr; Continue shopping</a>
+      <p>{isEl ? "Το καλάθι σας είναι άδειο." : "Your cart is empty."}</p>
+      <a href={lp("/")} class="continue-link">&larr; {isEl ? "Συνέχιση αγορών" : "Continue shopping"}</a>
     </div>
     <div id="cart-content" style="display:none">
       <div id="cart-lines"></div>
       <div class="cart-footer">
         <div class="subtotal">
-          <span>Subtotal</span>
+          <span>{isEl ? "Υποσύνολο" : "Subtotal"}</span>
           <span id="cart-subtotal" class="subtotal-amount"></span>
         </div>
-        <p class="shipping-note">Shipping calculated at checkout</p>
-        <button type="button" id="checkout-btn" class="checkout-btn">Checkout</button>
+        <p class="shipping-note">{isEl ? "Τα μεταφορικά υπολογίζονται στο checkout" : "Shipping calculated at checkout"}</p>
+        <button type="button" id="checkout-btn" class="checkout-btn">{isEl ? "Ολοκλήρωση Παραγγελίας" : "Checkout"}</button>
       </div>
     </div>
   </div>
@@ -161,6 +166,8 @@ import Layout from "../layouts/Layout.astro";
   var linesEl = document.getElementById("cart-lines");
   var subtotalEl = document.getElementById("cart-subtotal");
   var checkoutBtn = document.getElementById("checkout-btn");
+  var lang = document.getElementById("cart-container").dataset.lang;
+  var removeLabel = lang === "el" ? "Αφαίρεση" : "Remove";
 
   function renderCart(cart) {
     loadingEl.style.display = "none";
@@ -195,7 +202,7 @@ import Layout from "../layouts/Layout.astro";
         + '<span class="qty-value">' + node.quantity + '</span>'
         + '<button type="button" class="qty-btn" data-action="inc" data-line-id="' + node.id + '" data-qty="' + node.quantity + '">+</button>'
         + '</div>'
-        + '<button type="button" class="remove-btn" data-line-id="' + node.id + '">Remove</button>'
+        + '<button type="button" class="remove-btn" data-line-id="' + node.id + '">' + removeLabel + '</button>'
         + '</div>'
         + '</div>';
     });

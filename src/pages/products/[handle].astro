@@ -6,13 +6,18 @@ import {
   getCollectionWithProducts,
   PRODUCT_QUERY,
 } from "../../lib/shopify";
-import { NAV_CATEGORIES } from "../../lib/menuConfig";
+import { NAV_CATEGORIES, getCategoryLabel, getSubLabel } from "../../lib/menuConfig";
 import { getProductExtendedData } from "../../lib/productData";
+import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
 
 export async function getStaticPaths() {
   const products = await getAllProducts();
   return products.map((p: any) => ({ params: { handle: p.handle } }));
 }
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const lp = (p: string) => localizeHref(p, lang);
 
 const { handle } = Astro.params;
 const product = await getProductByHandle(handle!);
@@ -43,7 +48,7 @@ const isAvailable = firstVariant?.availableForSale ?? false;
 
 // Related products
 const collectionHandle = (product as any).collections?.nodes[0]?.handle ?? null;
-const collectionTitle = (product as any).collections?.nodes[0]?.title ?? "Related Products";
+const collectionTitle = (product as any).collections?.nodes[0]?.title ?? t("collection.relatedProducts");
 const { products: relatedRaw } = collectionHandle
   ? await getCollectionWithProducts(collectionHandle)
   : { products: [] };
@@ -57,8 +62,8 @@ const extData = getProductExtendedData(handle!);
 // Breadcrumb resolution
 function buildBreadcrumbs() {
   const crumbs: { label: string; href: string | null }[] = [
-    { label: "Home", href: "/" },
-    { label: "Products", href: "/" },
+    { label: t("nav.home"), href: lp("/") },
+    { label: lang === "el" ? "Προϊόντα" : "Products", href: lp("/") },
   ];
 
   if (extData.breadcrumbs) {
@@ -67,12 +72,12 @@ function buildBreadcrumbs() {
     for (const cat of NAV_CATEGORIES) {
       const child = cat.children.find((c) => c.handle === collectionHandle);
       if (child) {
-        crumbs.push({ label: cat.label, href: `/collections/${cat.handle}` });
-        crumbs.push({ label: child.label, href: `/collections/${child.handle}` });
+        crumbs.push({ label: getCategoryLabel(cat, lang), href: lp(`/collections/${cat.handle}`) });
+        crumbs.push({ label: getSubLabel(child, lang), href: lp(`/collections/${child.handle}`) });
         break;
       }
       if (cat.handle === collectionHandle) {
-        crumbs.push({ label: cat.label, href: `/collections/${cat.handle}` });
+        crumbs.push({ label: getCategoryLabel(cat, lang), href: lp(`/collections/${cat.handle}`) });
         break;
       }
     }
@@ -94,18 +99,18 @@ const hasSection2 =
 
 // Section 3 tabs
 const tabs: { id: string; label: string }[] = [];
-if (cleanDescription) tabs.push({ id: "description", label: "Description" });
+if (cleanDescription) tabs.push({ id: "description", label: lang === "el" ? "Περιγραφή" : "Description" });
 if (extData.specifications && extData.specifications.length > 0)
-  tabs.push({ id: "specifications", label: "Specifications" });
+  tabs.push({ id: "specifications", label: lang === "el" ? "Προδιαγραφές" : "Specifications" });
 if (extData.infoIcons && extData.infoIcons.length > 0)
-  tabs.push({ id: "features", label: "Features" });
+  tabs.push({ id: "features", label: lang === "el" ? "Χαρακτηριστικά" : "Features" });
 if (extData.documents && extData.documents.length > 0)
-  tabs.push({ id: "downloads", label: "Downloads" });
-if (extData.videoUrl) tabs.push({ id: "video", label: "Video" });
+  tabs.push({ id: "downloads", label: lang === "el" ? "Έγγραφα" : "Downloads" });
+if (extData.videoUrl) tabs.push({ id: "video", label: lang === "el" ? "Βίντεο" : "Video" });
 if (extData.faqs && extData.faqs.length > 0)
-  tabs.push({ id: "faqs", label: "FAQs" });
+  tabs.push({ id: "faqs", label: lang === "el" ? "Συχνές Ερωτήσεις" : "FAQs" });
 if (extData.additionalContent && extData.additionalContent.length > 0)
-  tabs.push({ id: "more-info", label: "More Info" });
+  tabs.push({ id: "more-info", label: lang === "el" ? "Περισσότερες Πληροφορίες" : "More Info" });
 
 const hasSection3 = tabs.length > 0;
 ---
@@ -144,7 +149,7 @@ const hasSection3 = tabs.length > 0;
     <!-- Left: Image area -->
     <div class="image-area">
       <div class="main-image-col">
-        {isSale && <span class="sale-badge">Sale</span>}
+        {isSale && <span class="sale-badge">{lang === "el" ? "Προσφορά" : "Sale"}</span>}
         <img
           id="main-image"
           src={images[0]?.url}
@@ -155,7 +160,7 @@ const hasSection3 = tabs.length > 0;
 
       {hasMultipleImages && (
         <div class="thumb-row">
-          <button type="button" class="thumb-arrow thumb-arrow-left" id="thumb-left" aria-label="Scroll left">
+          <button type="button" class="thumb-arrow thumb-arrow-left" id="thumb-left" aria-label={lang === "el" ? "Κύλιση αριστερά" : "Scroll left"}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
             </svg>
@@ -168,14 +173,14 @@ const hasSection3 = tabs.length > 0;
                   class={"thumb-btn" + (i === 0 ? " active" : "")}
                   data-src={img.url}
                   data-alt={img.altText || product.title}
-                  aria-label={`View image ${i + 1}`}
+                  aria-label={`${lang === "el" ? "Προβολή εικόνας" : "View image"} ${i + 1}`}
                 >
                   <img src={img.url} alt={img.altText || product.title} />
                 </button>
               ))}
             </div>
           </div>
-          <button type="button" class="thumb-arrow thumb-arrow-right" id="thumb-right" aria-label="Scroll right">
+          <button type="button" class="thumb-arrow thumb-arrow-right" id="thumb-right" aria-label={lang === "el" ? "Κύλιση δεξιά" : "Scroll right"}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
             </svg>
@@ -189,7 +194,7 @@ const hasSection3 = tabs.length > 0;
       <h1 class="product-title">{product.title}</h1>
 
       {sku && (
-        <p class="product-sku">Product code: <span>{sku}</span></p>
+        <p class="product-sku">{t("product.productCode")} <span>{sku}</span></p>
       )}
 
       <div class={"availability-badge" + (isAvailable ? " in-stock" : " out-of-stock")}>
@@ -198,14 +203,14 @@ const hasSection3 = tabs.length > 0;
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
               <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
-            In Stock
+            {lang === "el" ? "Διαθέσιμο" : "In Stock"}
           </>
         ) : (
           <>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
-            Out of Stock
+            {lang === "el" ? "Εξαντλημένο" : "Out of Stock"}
           </>
         )}
       </div>
@@ -230,7 +235,7 @@ const hasSection3 = tabs.length > 0;
           <p class="short-desc" id="short-desc">{product.description}</p>
           {hasSection3 && (
             <button type="button" class="read-more-btn" id="read-more-top">
-              Read more
+              {lang === "el" ? "Διαβάστε περισσότερα" : "Read more"}
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="13" height="13">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
               </svg>
@@ -242,7 +247,7 @@ const hasSection3 = tabs.length > 0;
       <!-- Variant selector -->
       {hasMultipleVariants && (
         <div class="variant-selector">
-          <label class="variant-label" for="variant-select">Size</label>
+          <label class="variant-label" for="variant-select">{lang === "el" ? "Μέγεθος" : "Size"}</label>
           <div class="variant-select-wrap">
             <select id="variant-select" class="variant-select">
               {product.variants.nodes.map((v: any) => (
@@ -254,7 +259,7 @@ const hasSection3 = tabs.length > 0;
                   data-available={v.availableForSale ? "true" : "false"}
                   disabled={!v.availableForSale}
                 >
-                  {v.title}{!v.availableForSale ? " (Sold Out)" : ""}
+                  {v.title}{!v.availableForSale ? (lang === "el" ? " (Εξαντλημένο)" : " (Sold Out)") : ""}
                 </option>
               ))}
             </select>
@@ -268,9 +273,9 @@ const hasSection3 = tabs.length > 0;
       <!-- Quantity + Add to Cart -->
       <div class="buy-row">
         <div class="qty-selector">
-          <button type="button" class="qty-btn" id="qty-minus" aria-label="Decrease quantity">&minus;</button>
+          <button type="button" class="qty-btn" id="qty-minus" aria-label={lang === "el" ? "Μείωση ποσότητας" : "Decrease quantity"}>&minus;</button>
           <span class="qty-display" id="qty-display">1</span>
-          <button type="button" class="qty-btn" id="qty-plus" aria-label="Increase quantity">+</button>
+          <button type="button" class="qty-btn" id="qty-plus" aria-label={lang === "el" ? "Αύξηση ποσότητας" : "Increase quantity"}>+</button>
         </div>
 
         <button
@@ -280,7 +285,7 @@ const hasSection3 = tabs.length > 0;
           data-variant-id={firstVariant?.id}
           disabled={!isAvailable}
         >
-          {isAvailable ? "Add to Cart" : "Sold Out"}
+          {isAvailable ? (lang === "el" ? "Προσθήκη στο Καλάθι" : "Add to Cart") : (lang === "el" ? "Εξαντλημένο" : "Sold Out")}
         </button>
       </div>
     </div>
@@ -295,7 +300,7 @@ const hasSection3 = tabs.length > 0;
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="28" height="28">
               <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 6h9M7.5 12h4.5m-4.5 6h9M3.75 3h16.5a.75.75 0 0 1 .75.75v16.5a.75.75 0 0 1-.75.75H3.75a.75.75 0 0 1-.75-.75V3.75A.75.75 0 0 1 3.75 3Z" />
             </svg>
-            <span>Find Your Size</span>
+            <span>{lang === "el" ? "Βρείτε το Μέγεθός σας" : "Find Your Size"}</span>
           </button>
         )}
 
@@ -304,7 +309,7 @@ const hasSection3 = tabs.length > 0;
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="28" height="28">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
             </svg>
-            <span>Eligible to Financial Assistance</span>
+            <span>{lang === "el" ? "Επιλέξιμο για Οικονομική Βοήθεια" : "Eligible to Financial Assistance"}</span>
           </a>
         )}
 
@@ -334,7 +339,7 @@ const hasSection3 = tabs.length > 0;
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="28" height="28">
               <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0H6.75m11.25 0h2.625c.621 0 1.125-.504 1.125-1.125v-4.875c0-.621-.504-1.125-1.125-1.125h-3.375L14.25 5.437a1.125 1.125 0 0 0-.95-.524H6.75a1.125 1.125 0 0 0-1.125 1.125v12.087" />
             </svg>
-            <span>Wolt Delivery</span>
+            <span>{lang === "el" ? "Παράδοση Wolt" : "Wolt Delivery"}</span>
           </a>
         )}
       </div>
@@ -346,8 +351,8 @@ const hasSection3 = tabs.length > 0;
     <dialog class="sizing-modal" id="sizing-modal">
       <div class="sizing-modal-content">
         <div class="sizing-modal-header">
-          <h2>Sizing Guide</h2>
-          <button type="button" class="sizing-modal-close" id="close-sizing-guide" aria-label="Close">
+          <h2>{lang === "el" ? "Οδηγός Μεγεθών" : "Sizing Guide"}</h2>
+          <button type="button" class="sizing-modal-close" id="close-sizing-guide" aria-label={lang === "el" ? "Κλείσιμο" : "Close"}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
@@ -384,7 +389,7 @@ const hasSection3 = tabs.length > 0;
                 <div class="description" id="desc-body" set:html={cleanDescription} />
               </div>
               <button type="button" class="desc-toggle" id="desc-toggle-s3" aria-expanded="false" style="display:none;">
-                Read more
+                {lang === "el" ? "Διαβάστε περισσότερα" : "Read more"}
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="13" height="13" class="desc-toggle-icon">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
@@ -399,8 +404,8 @@ const hasSection3 = tabs.length > 0;
             <table class="specs-table">
               <thead>
                 <tr>
-                  <th>Specification</th>
-                  <th>Details</th>
+                  <th>{lang === "el" ? "Προδιαγραφή" : "Specification"}</th>
+                  <th>{lang === "el" ? "Λεπτομέρειες" : "Details"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -454,7 +459,7 @@ const hasSection3 = tabs.length > 0;
             <div class="video-wrap">
               <iframe
                 src={extData.videoUrl}
-                title="Product video"
+                title={lang === "el" ? "Βίντεο προϊόντος" : "Product video"}
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen
@@ -504,14 +509,14 @@ const hasSection3 = tabs.length > 0;
   {relatedProducts.length > 0 && (
     <section class="related">
       <div class="related-header">
-        <h2 class="related-title">More from {collectionTitle}</h2>
+        <h2 class="related-title">{lang === "el" ? "Περισσότερα από" : "More from"} {collectionTitle}</h2>
         <div class="related-arrows">
-          <button type="button" class="rel-arrow" id="rel-prev" aria-label="Previous products">
+          <button type="button" class="rel-arrow" id="rel-prev" aria-label={lang === "el" ? "Προηγούμενα προϊόντα" : "Previous products"}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
             </svg>
           </button>
-          <button type="button" class="rel-arrow" id="rel-next" aria-label="Next products">
+          <button type="button" class="rel-arrow" id="rel-next" aria-label={lang === "el" ? "Επόμενα προϊόντα" : "Next products"}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
             </svg>
@@ -521,7 +526,7 @@ const hasSection3 = tabs.length > 0;
       <div class="related-track-wrap">
         <div class="related-track" id="related-track">
           {relatedProducts.map((p: any) => (
-            <a class="rel-card" href={`/products/${p.handle}`}>
+            <a class="rel-card" href={lp(`/products/${p.handle}`)}>
               <div class="rel-card-img-wrap">
                 {p.featuredImage ? (
                   <img
@@ -539,7 +544,7 @@ const hasSection3 = tabs.length > 0;
                   {parseFloat(p.priceRange.minVariantPrice.amount).toFixed(2)}
                 </p>
                 <div class="rel-card-cta">
-                  View Product
+                  {t("collection.viewProduct")}
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="13" height="13">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                   </svg>
