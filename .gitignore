@@ -144,3 +144,11 @@ vite.config.ts.timestamp-*
 # OS
 .DS_Store
 .vercel
+
+# Local dev / agent tooling
+.claude/
+.playwright-mcp/
+
+# Ad-hoc screenshots at repo root (use /screenshots/ if you need to commit some)
+/*.png
+/*.jpg
