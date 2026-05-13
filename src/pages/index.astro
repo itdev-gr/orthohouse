@@ -1,7 +1,12 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { getProducts, PRODUCTS_QUERY, getCollectionPreview } from "../lib/shopify";
-import { NAV_CATEGORIES } from "../lib/menuConfig";
+import { NAV_CATEGORIES, getCategoryLabel, getSubLabel, getSubDescription } from "../lib/menuConfig";
+import { pickLang, useTranslations, localizeHref } from "../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const lp = (p: string) => localizeHref(p, lang);
 
 const products = await getProducts(12);
 
@@ -82,7 +87,7 @@ const catDataJSON = JSON.stringify(
     />
     <div class="hero-overlay"></div>
     <div class="hero-content">
-      <p class="hero-tagline">AT ORTHOHOUSE, WE MAKE IT EASIER FOR YOU TO MOVE BETTER AND LIVE BETTER</p>
+      <p class="hero-tagline">{t("home.hero.tagline")}</p>
     </div>
   </div>
 
@@ -90,9 +95,9 @@ const catDataJSON = JSON.stringify(
        WHY CUSTOMERS TRUST US
        ══════════════════════════════════════ -->
   <section class="trust-section">
-    <h2 class="trust-section-title">WHY CUSTOMERS TRUST US</h2>
+    <h2 class="trust-section-title">{t("home.trust.title")}</h2>
     <p class="trust-section-text">
-      We help people facing pain or movement limitations find reliable, clinically approved solutions with expert guidance and genuine care. At OrthoHouse, we make it easier for you to move better and live better wherever you are.
+      {t("home.trust.body")}
     </p>
   </section>
 
@@ -102,19 +107,17 @@ const catDataJSON = JSON.stringify(
   <section class="orthotics-intro" aria-labelledby="orthotics-intro-title">
     <div class="orthotics-intro__inner">
       <div class="orthotics-intro__text">
-        <h2 id="orthotics-intro-title" class="orthotics-intro__title">Orthotics</h2>
+        <h2 id="orthotics-intro-title" class="orthotics-intro__title">{lang === "el" ? "Ορθωτικά" : "Orthotics"}</h2>
         <p class="orthotics-intro__body">
-          Our goal is to help people move more freely and with less pain, correct
-          malpositions and provide effective support for the healing process.
-          Orthoses and supports have proven to be particularly effective for these
-          purposes. From the ground-breaking C-Brace to our complete suite of
-          stroke solutions, we're are here to support you.
+          {lang === "el"
+            ? "Στόχος μας είναι να βοηθήσουμε ανθρώπους να κινούνται πιο ελεύθερα και με λιγότερο πόνο, να διορθώσουμε δυσπλασίες και να παρέχουμε αποτελεσματική υποστήριξη στη διαδικασία αποθεραπείας. Οι νάρθηκες και τα στηρίγματα έχουν αποδειχθεί ιδιαίτερα αποτελεσματικά για τους σκοπούς αυτούς. Από το πρωτοποριακό C-Brace μέχρι την πλήρη γκάμα λύσεών μας για το εγκεφαλικό, είμαστε εδώ για να σας υποστηρίξουμε."
+            : "Our goal is to help people move more freely and with less pain, correct malpositions and provide effective support for the healing process. Orthoses and supports have proven to be particularly effective for these purposes. From the ground-breaking C-Brace to our complete suite of stroke solutions, we're are here to support you."}
         </p>
         <div class="orthotics-intro__actions">
           <a class="orthotics-intro__btn orthotics-intro__btn--filled"
-             href="/collections/orthopedic-braces-supports">Learn More</a>
+             href={lp("/collections/orthopedic-braces-supports")}>{lang === "el" ? "Μάθετε Περισσότερα" : "Learn More"}</a>
           <a class="orthotics-intro__btn orthotics-intro__btn--outline"
-             href="/collections/orthopedic-braces-supports">Orthotic Solutions</a>
+             href={lp("/collections/orthopedic-braces-supports")}>{lang === "el" ? "Ορθωτικές Λύσεις" : "Orthotic Solutions"}</a>
         </div>
       </div>
 
@@ -139,26 +142,26 @@ const catDataJSON = JSON.stringify(
       <div class="body-map-wrap">
         <img class="human-img" src="/humanbody-1.webp" alt="Orthopaedic human body illustration" width="1000" height="1000" loading="lazy"/>
         <div class="body-map-overlay" aria-hidden="true">
-          <div class="body-dot" data-handle="head"                 style="left:50%;top:9%"><span class="dot-label">Head</span></div>
-          <div class="body-dot" data-handle="cervical"             style="left:50%;top:16%"><span class="dot-label">Neck</span></div>
-          <div class="body-dot" data-handle="shoulder"             style="left:35%;top:23%"><span class="dot-label">Shoulder</span></div>
-          <div class="body-dot" data-handle="thoracic"             style="left:50%;top:32%"><span class="dot-label">Thoracic</span></div>
-          <div class="body-dot" data-handle="elbow"                style="left:22%;top:22%"><span class="dot-label">Elbow</span></div>
-          <div class="body-dot" data-handle="upper-limb"           style="left:78%;top:26%"><span class="dot-label">Upper Limb</span></div>
-          <div class="body-dot" data-handle="wrist-thumb-supports" style="left:10%;top:22%"><span class="dot-label">Wrist &amp; Thumb</span></div>
-          <div class="body-dot" data-handle="hand"                 style="left:93%;top:22%"><span class="dot-label">Hand</span></div>
-          <div class="body-dot" data-handle="fingers"              style="left:7%;top:23%"><span class="dot-label">Fingers</span></div>
-          <div class="body-dot" data-handle="lumbar"               style="left:50%;top:47%"><span class="dot-label">Lumbar</span></div>
-          <div class="body-dot" data-handle="trunk-lumbar-supports"style="left:43%;top:42%"><span class="dot-label">Trunk &amp; Lumbar</span></div>
-          <div class="body-dot" data-handle="hip"                  style="left:42%;top:54%"><span class="dot-label">Hip</span></div>
-          <div class="body-dot" data-handle="thigh"                style="left:42%;top:64%"><span class="dot-label">Thigh</span></div>
-          <div class="body-dot" data-handle="lower-limb"           style="left:58%;top:64%"><span class="dot-label">Lower Limb</span></div>
-          <div class="body-dot" data-handle="knee"                 style="left:42%;top:73%"><span class="dot-label">Knee</span></div>
-          <div class="body-dot" data-handle="knee-braces"          style="left:58%;top:73%"><span class="dot-label">Knee Braces</span></div>
-          <div class="body-dot" data-handle="calf"                 style="left:42%;top:82%"><span class="dot-label">Calf</span></div>
-          <div class="body-dot" data-handle="ankle"                style="left:58%;top:90%"><span class="dot-label">Ankle</span></div>
-          <div class="body-dot" data-handle="foot"                 style="left:42%;top:94%"><span class="dot-label">Foot</span></div>
-          <div class="body-dot" data-handle="orthopedic-insoles"   style="left:58%;top:94%"><span class="dot-label">Orthopedic Insoles</span></div>
+          <div class="body-dot" data-handle="head"                 style="left:50%;top:9%"><span class="dot-label">{lang === "el" ? "Κεφάλι" : "Head"}</span></div>
+          <div class="body-dot" data-handle="cervical"             style="left:50%;top:16%"><span class="dot-label">{lang === "el" ? "Αυχένας" : "Neck"}</span></div>
+          <div class="body-dot" data-handle="shoulder"             style="left:35%;top:23%"><span class="dot-label">{lang === "el" ? "Ώμος" : "Shoulder"}</span></div>
+          <div class="body-dot" data-handle="thoracic"             style="left:50%;top:32%"><span class="dot-label">{lang === "el" ? "Θώρακας" : "Thoracic"}</span></div>
+          <div class="body-dot" data-handle="elbow"                style="left:22%;top:22%"><span class="dot-label">{lang === "el" ? "Αγκώνας" : "Elbow"}</span></div>
+          <div class="body-dot" data-handle="upper-limb"           style="left:78%;top:26%"><span class="dot-label">{lang === "el" ? "Άνω Άκρο" : "Upper Limb"}</span></div>
+          <div class="body-dot" data-handle="wrist-thumb-supports" style="left:10%;top:22%"><span class="dot-label">{lang === "el" ? "Καρπός & Αντίχειρας" : "Wrist & Thumb"}</span></div>
+          <div class="body-dot" data-handle="hand"                 style="left:93%;top:22%"><span class="dot-label">{lang === "el" ? "Χέρι" : "Hand"}</span></div>
+          <div class="body-dot" data-handle="fingers"              style="left:7%;top:23%"><span class="dot-label">{lang === "el" ? "Δάκτυλα" : "Fingers"}</span></div>
+          <div class="body-dot" data-handle="lumbar"               style="left:50%;top:47%"><span class="dot-label">{lang === "el" ? "Οσφύς" : "Lumbar"}</span></div>
+          <div class="body-dot" data-handle="trunk-lumbar-supports"style="left:43%;top:42%"><span class="dot-label">{lang === "el" ? "Κορμός & Οσφύς" : "Trunk & Lumbar"}</span></div>
+          <div class="body-dot" data-handle="hip"                  style="left:42%;top:54%"><span class="dot-label">{lang === "el" ? "Ισχίο" : "Hip"}</span></div>
+          <div class="body-dot" data-handle="thigh"                style="left:42%;top:64%"><span class="dot-label">{lang === "el" ? "Μηρός" : "Thigh"}</span></div>
+          <div class="body-dot" data-handle="lower-limb"           style="left:58%;top:64%"><span class="dot-label">{lang === "el" ? "Κάτω Άκρο" : "Lower Limb"}</span></div>
+          <div class="body-dot" data-handle="knee"                 style="left:42%;top:73%"><span class="dot-label">{lang === "el" ? "Γόνατο" : "Knee"}</span></div>
+          <div class="body-dot" data-handle="knee-braces"          style="left:58%;top:73%"><span class="dot-label">{lang === "el" ? "Νάρθηκες Γόνατος" : "Knee Braces"}</span></div>
+          <div class="body-dot" data-handle="calf"                 style="left:42%;top:82%"><span class="dot-label">{lang === "el" ? "Κνήμη" : "Calf"}</span></div>
+          <div class="body-dot" data-handle="ankle"                style="left:58%;top:90%"><span class="dot-label">{lang === "el" ? "Αστράγαλος" : "Ankle"}</span></div>
+          <div class="body-dot" data-handle="foot"                 style="left:42%;top:94%"><span class="dot-label">{lang === "el" ? "Πέλμα" : "Foot"}</span></div>
+          <div class="body-dot" data-handle="orthopedic-insoles"   style="left:58%;top:94%"><span class="dot-label">{lang === "el" ? "Ορθοπεδικοί Πάτοι" : "Orthopedic Insoles"}</span></div>
         </div>
       </div>
     </div>
@@ -1337,6 +1340,131 @@ const catDataJSON = JSON.stringify(
     }
     .ortho-banner {
       flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  /* ══════════════════════════════════════
+     ORTHOTICS INTRO SECTION
+     ══════════════════════════════════════ */
+  .orthotics-intro {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+  }
+
+  .orthotics-intro__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4rem;
+    align-items: center;
+  }
+
+  .orthotics-intro__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    max-width: 36rem;
+  }
+
+  .orthotics-intro__title {
+    margin: 0;
+    font-size: clamp(2.6rem, 5vw, 3.75rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    color: #1a1a1a;
+  }
+
+  .orthotics-intro__body {
+    margin: 0;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: #1a1a1a;
+  }
+
+  .orthotics-intro__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: 0.25rem;
+  }
+
+  .orthotics-intro__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.9rem 2rem;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    border: 2px solid transparent;
+  }
+
+  .orthotics-intro__btn--filled {
+    background: #1e3a5f;
+    color: #fff;
+    border-color: #1e3a5f;
+  }
+  .orthotics-intro__btn--filled:hover {
+    background: #16294a;
+    border-color: #16294a;
+  }
+
+  .orthotics-intro__btn--outline {
+    background: #fff;
+    color: #1e3a5f;
+    border-color: #1e3a5f;
+  }
+  .orthotics-intro__btn--outline:hover {
+    background: #f1f5fb;
+  }
+
+  .orthotics-intro__visual {
+    position: relative;
+    width: 100%;
+    max-width: 580px;
+    aspect-ratio: 1 / 1;
+    margin-left: auto;
+  }
+
+  .orthotics-intro__halo {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: #e8eef5;
+    transform: translate(-24px, 24px) scale(1.06);
+    z-index: 0;
+  }
+
+  .orthotics-intro__photo {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+  }
+
+  @media (max-width: 900px) {
+    .orthotics-intro {
+      padding: 3rem 1.25rem;
+    }
+    .orthotics-intro__inner {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+    .orthotics-intro__visual {
+      order: -1;
+      max-width: min(80vw, 420px);
+      margin: 0 auto;
+    }
+    .orthotics-intro__text {
+      max-width: 100%;
       align-items: flex-start;
     }
   }
