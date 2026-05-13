@@ -1,6 +1,7 @@
 ---
 import { shopifyConfig, getOverlayProducts, getCollectionPreview } from "../lib/shopify";
-import { NAV_CATEGORIES } from "../lib/menuConfig";
+import { NAV_CATEGORIES, getCategoryLabel, getSubLabel } from "../lib/menuConfig";
+import { pickLang, useTranslations, switchLocaleHref, localizeHref } from "../i18n/utils";
 
 interface Props {
   title: string;
@@ -12,6 +13,14 @@ interface Props {
   };
 }
 const { title, swrData } = Astro.props;
+
+// i18n
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const otherLang = lang === "el" ? "en" : "el";
+const switchHref = switchLocaleHref(Astro.url.pathname, otherLang);
+const lp = (path: string) => localizeHref(path, lang);
+const findCat = (handle: string) => NAV_CATEGORIES.find((c) => c.handle === handle);
 
 // ── Search overlay data ────────────────────────────────────────────────────
 const overlayAllProducts = await getOverlayProducts(20);
@@ -33,7 +42,7 @@ const saleProducts = overlayAllProducts
 
 // Fallback when nothing is on sale
 const saleProductsFinal = saleProducts.length > 0 ? saleProducts : overlayAllProducts.slice(6, 9);
-const saleColTitle      = saleProducts.length > 0 ? "On Sale"    : "Featured";
+const saleColTitle      = saleProducts.length > 0 ? (lang === "el" ? "Σε Προσφορά" : "On Sale") : (lang === "el" ? "Επιλεγμένα" : "Featured");
 
 const wheelchairProducts =
   wheelchairPreview.length > 0 ? wheelchairPreview : overlayAllProducts.slice(9, 12);
@@ -73,7 +82,7 @@ function shopifyThumb(url: string, w = 300) {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang === "el" ? "el" : "en"}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -88,44 +97,11 @@ function shopifyThumb(url: string, w = 300) {
       <!-- ROW 1: White top bar — logo, search, lang, profile, cart -->
       <div class="top-bar">
         <div class="top-bar-inner">
-          <!-- Left group: Logo + Pages menu -->
+          <!-- Left group: Logo -->
           <div class="top-bar-left">
-            <a href="/" class="nav-logo">
+            <a href={lp("/")} class="nav-logo">
               <img src="https://orthohouse.com.cy/cdn/shop/files/logo_website.png?v=1767804500&width=240" alt="OrthoHouse Cyprus" class="nav-logo-img" width="240" height="60" />
             </a>
-
-            <!-- Pages menu (hamburger + "Menu" label) — right of logo -->
-            <div class="pages-menu" id="pages-menu">
-              <button type="button" class="pages-menu-btn" id="pages-menu-btn" aria-expanded="false" aria-controls="pages-menu-dropdown">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-                <span>Menu</span>
-              </button>
-              <div class="pages-menu-dropdown" id="pages-menu-dropdown">
-                <!-- ── Product Categories ── -->
-                <span class="pages-menu-section">Categories</span>
-                <a href="/collections/orthopedic-braces-supports" class="pages-menu-link">Orthopaedics</a>
-                <a href="/collections/walking-aids" class="pages-menu-link">Walking Aids</a>
-                <a href="/collections/wheelchairs-and-home-care-aids" class="pages-menu-link">Wheelchairs &amp; Home Care</a>
-                <a href="/collections/exercise-and-well-being" class="pages-menu-link">Comfort &amp; Well Being</a>
-                <a href="/collections/kybun-shoes" class="pages-menu-link">Kybun Shoes</a>
-
-                <hr class="pages-menu-divider" />
-
-                <!-- ── Pages ── -->
-                <span class="pages-menu-section">Pages</span>
-                <a href="/" class="pages-menu-link">Home</a>
-                <a href="/pages/about-us" class="pages-menu-link">About Us</a>
-                <a href="/pages/working-hours" class="pages-menu-link">Working Hours</a>
-                <a href="/pages/shipping-delivery" class="pages-menu-link">Shipping &amp; Delivery</a>
-                <a href="/pages/refund-cancellation-policy" class="pages-menu-link">Refund &amp; Cancellation Policy</a>
-                <a href="/pages/cookies-policy" class="pages-menu-link">Cookies Policy</a>
-                <a href="/pages/terms-and-conditions" class="pages-menu-link">Terms &amp; Conditions</a>
-                <a href="/pages/terms-of-service" class="pages-menu-link">Terms of Service</a>
-                <a href="/pages/legal-notice" class="pages-menu-link">Legal Notice</a>
-              </div>
-            </div>
           </div>
 
           <!-- Search bar -->
@@ -133,26 +109,32 @@ function shopifyThumb(url: string, w = 300) {
             <svg class="top-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
               <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
             </svg>
-            <input type="text" class="top-search-input" placeholder="Search products..." aria-label="Search products" />
+            <input type="text" class="top-search-input" placeholder={t("search.placeholder")} aria-label={t("search.ariaLabel")} />
           </div>
 
           <div class="top-bar-right">
             <!-- Language switcher -->
-            <button type="button" class="top-lang-btn" aria-label="Switch language" data-action="lang-switch">
-              <span class="lang-active">EN</span>
+            <a
+              href={switchHref}
+              class="top-lang-btn"
+              aria-label={t("header.switchLanguage")}
+              data-action="lang-switch"
+              data-current-lang={lang}
+            >
+              <span class={lang === "en" ? "lang-active" : "lang-inactive"}>EN</span>
               <span class="lang-sep">/</span>
-              <span class="lang-inactive">GR</span>
-            </button>
+              <span class={lang === "el" ? "lang-active" : "lang-inactive"}>GR</span>
+            </a>
 
             <!-- Profile icon -->
-            <a href="/account" class="top-icon-btn top-profile" aria-label="Account">
+            <a href={lp("/account")} class="top-icon-btn top-profile" aria-label={t("header.account")}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               </svg>
             </a>
 
             <!-- Cart -->
-            <a href="/cart" class="top-icon-btn cart-link" aria-label="Shopping cart">
+            <a href={lp("/cart")} class="top-icon-btn cart-link" aria-label={t("header.cart")}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
               </svg>
@@ -160,14 +142,14 @@ function shopifyThumb(url: string, w = 300) {
             </a>
 
             <!-- Search icon (mobile only) -->
-            <button type="button" class="top-icon-btn mobile-search-btn" id="mobile-search-btn" aria-label="Search">
+            <button type="button" class="top-icon-btn mobile-search-btn" id="mobile-search-btn" aria-label={t("search.title")}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
               </svg>
             </button>
 
             <!-- Hamburger (mobile only) -->
-            <button type="button" class="top-icon-btn hamburger-btn" id="hamburger-btn" aria-label="Open menu">
+            <button type="button" class="top-icon-btn hamburger-btn" id="hamburger-btn" aria-label={t("header.openMenu")}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="22" height="22">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
               </svg>
@@ -188,14 +170,14 @@ function shopifyThumb(url: string, w = 300) {
                   aria-expanded="false"
                   aria-controls={`mega-panel-${i}`}
                 >
-                  {cat.label}
+                  {getCategoryLabel(cat, lang)}
                   <svg class="cat-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="15" height="15">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                   </svg>
                 </button>
               ) : (
-                <a href={`/collections/${cat.handle}`} class="cat-trigger">
-                  {cat.label}
+                <a href={lp(`/collections/${cat.handle}`)} class="cat-trigger">
+                  {getCategoryLabel(cat, lang)}
                 </a>
               )}
             </div>
@@ -210,18 +192,18 @@ function shopifyThumb(url: string, w = 300) {
               id={`mega-panel-${i}`}
               data-panel-index={i}
               role="region"
-              aria-label={`${cat.label} subcategories`}
+              aria-label={`${getCategoryLabel(cat, lang)} subcategories`}
             >
               <div class="mega-inner">
                 <div class="mega-grid">
                   {cat.children.map((sub) => (
-                    <a href={`/collections/${sub.handle}`} class="mega-link">
-                      {sub.label}
+                    <a href={lp(`/collections/${sub.handle}`)} class="mega-link">
+                      {getSubLabel(sub, lang)}
                     </a>
                   ))}
                 </div>
-                <a href={`/collections/${cat.handle}`} class="mega-view-all">
-                  View all {cat.label} &rarr;
+                <a href={lp(`/collections/${cat.handle}`)} class="mega-view-all">
+                  {t("mega.viewAll", { category: getCategoryLabel(cat, lang) })}
                 </a>
               </div>
             </div>
@@ -233,7 +215,7 @@ function shopifyThumb(url: string, w = 300) {
     <!-- ══════════════════════════════════════
          SEARCH OVERLAY (bottom sheet)
          ══════════════════════════════════════ -->
-    <div class="sov-backdrop" id="sov-backdrop" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="sov-backdrop" id="sov-backdrop" role="dialog" aria-modal="true" aria-label={t("search.title")}>
       <div class="sov-panel" id="sov-panel">
         <div class="sov-inner">
 
@@ -247,13 +229,13 @@ function shopifyThumb(url: string, w = 300) {
                 id="sov-input"
                 type="text"
                 class="sov-input"
-                placeholder="Search here..."
+                placeholder={t("search.overlayPlaceholder")}
                 autocomplete="off"
                 autocorrect="off"
                 spellcheck="false"
               />
             </div>
-            <button type="button" class="sov-close" id="sov-close" aria-label="Close search">
+            <button type="button" class="sov-close" id="sov-close" aria-label={t("search.close")}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
@@ -269,7 +251,7 @@ function shopifyThumb(url: string, w = 300) {
           </div>
 
           <!-- ── Hint text ── -->
-          <p class="sov-hint" id="sov-hint">Start typing to see the products you're looking for.</p>
+          <p class="sov-hint" id="sov-hint">{lang === "el" ? "Αρχίστε να πληκτρολογείτε για να δείτε τα προϊόντα που ψάχνετε." : "Start typing to see the products you're looking for."}</p>
 
           <!-- ── Featured sections (shown when input is empty) ── -->
           <div class="sov-featured" id="sov-featured">
@@ -277,11 +259,11 @@ function shopifyThumb(url: string, w = 300) {
 
               <!-- Col 1 · New Products -->
               <div class="sov-col">
-                <h3 class="sov-col-title">New Products</h3>
+                <h3 class="sov-col-title">{t("home.newProducts.title")}</h3>
                 {newProducts.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -293,7 +275,7 @@ function shopifyThumb(url: string, w = 300) {
                           {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
                           <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
                         </div>
-                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? (lang === "el" ? "Διαθέσιμο" : "In Stock") : (lang === "el" ? "Εξαντλημένο" : "Out of Stock")}</span>
                       </div>
                     </a>
                   );
@@ -302,11 +284,11 @@ function shopifyThumb(url: string, w = 300) {
 
               <!-- Col 2 · Popular Products -->
               <div class="sov-col">
-                <h3 class="sov-col-title">Popular Products</h3>
+                <h3 class="sov-col-title">{lang === "el" ? "Δημοφιλή Προϊόντα" : "Popular Products"}</h3>
                 {popularProducts.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -318,7 +300,7 @@ function shopifyThumb(url: string, w = 300) {
                           {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
                           <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
                         </div>
-                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? (lang === "el" ? "Διαθέσιμο" : "In Stock") : (lang === "el" ? "Εξαντλημένο" : "Out of Stock")}</span>
                       </div>
                     </a>
                   );
@@ -331,7 +313,7 @@ function shopifyThumb(url: string, w = 300) {
                 {saleProductsFinal.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -343,7 +325,7 @@ function shopifyThumb(url: string, w = 300) {
                           {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
                           <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
                         </div>
-                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? (lang === "el" ? "Διαθέσιμο" : "In Stock") : (lang === "el" ? "Εξαντλημένο" : "Out of Stock")}</span>
                       </div>
                     </a>
                   );
@@ -352,11 +334,11 @@ function shopifyThumb(url: string, w = 300) {
 
               <!-- Col 4 · Wheelchairs & Home Care -->
               <div class="sov-col">
-                <h3 class="sov-col-title">Wheelchairs &amp; Home Care</h3>
+                <h3 class="sov-col-title">{t("wheelchairsHomeCare")}</h3>
                 {wheelchairProducts.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={`/products/${p.handle}`} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -368,7 +350,7 @@ function shopifyThumb(url: string, w = 300) {
                           {d.isSale && <s class="sov-compare-price">{d.currency} {d.compareAt.toFixed(2)}</s>}
                           <span class={`sov-curr-price${d.isSale ? " sale" : ""}`}>{d.currency} {d.price.toFixed(2)}</span>
                         </div>
-                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? "In Stock" : "Out of Stock"}</span>
+                        <span class={`sov-avail${d.isAvail ? " in" : " out"}`}>● {d.isAvail ? (lang === "el" ? "Διαθέσιμο" : "In Stock") : (lang === "el" ? "Εξαντλημένο" : "Out of Stock")}</span>
                       </div>
                     </a>
                   );
@@ -381,8 +363,8 @@ function shopifyThumb(url: string, w = 300) {
           <!-- ── Live search results (shown when typing) ── -->
           <div class="sov-results" id="sov-results" style="display:none">
             <div class="sov-results-grid" id="sov-results-grid"></div>
-            <a id="sov-see-all" href="/search" class="sov-see-all" style="display:none">
-              See all results for &ldquo;<span id="sov-query-label"></span>&rdquo; &rarr;
+            <a id="sov-see-all" href={lp("/search")} class="sov-see-all" style="display:none">
+              {lang === "el" ? "Δείτε όλα τα αποτελέσματα για" : "See all results for"} &ldquo;<span id="sov-query-label"></span>&rdquo; &rarr;
             </a>
           </div>
 
@@ -397,26 +379,26 @@ function shopifyThumb(url: string, w = 300) {
     <div class="mobile-overlay" id="mobile-overlay"></div>
 
     <!-- Left side-drawer -->
-    <div class="mobile-drawer" id="mobile-drawer" role="dialog" aria-modal="true" aria-label="Site navigation">
+    <div class="mobile-drawer" id="mobile-drawer" role="dialog" aria-modal="true" aria-label={lang === "el" ? "Πλοήγηση ιστοτόπου" : "Site navigation"}>
 
       <!-- Scrollable nav body -->
       <nav class="drawer-nav">
 
-        <!-- ── Shop / Categories ── -->
-        <p class="drawer-section-label">Shop</p>
+        <!-- ── Solutions / Categories ── -->
+        <p class="drawer-section-label">{lang === "el" ? "Λύσεις" : "Solutions"}</p>
 
         {NAV_CATEGORIES.map((cat, i) => (
           <div class="drawer-cat-item">
             <div class="drawer-row">
-              <a href={`/collections/${cat.handle}`} class="drawer-trigger drawer-link">
-                <span>{cat.label}</span>
+              <a href={lp(`/collections/${cat.handle}`)} class="drawer-trigger drawer-link">
+                <span>{getCategoryLabel(cat, lang)}</span>
               </a>
               {cat.children.length > 0 && (
                 <button
                   type="button"
                   class="drawer-toggle"
                   data-drawer-index={i}
-                  aria-label={`Toggle ${cat.label} subcategories`}
+                  aria-label={`Toggle ${getCategoryLabel(cat, lang)} subcategories`}
                   aria-expanded="false"
                   aria-controls={`drawer-children-${i}`}
                 >
@@ -429,49 +411,33 @@ function shopifyThumb(url: string, w = 300) {
             {cat.children.length > 0 && (
               <div class="drawer-children" id={`drawer-children-${i}`}>
                 {cat.children.map((sub) => (
-                  <a href={`/collections/${sub.handle}`} class="drawer-sub-link">
-                    {sub.label}
+                  <a href={lp(`/collections/${sub.handle}`)} class="drawer-sub-link">
+                    {getSubLabel(sub, lang)}
                   </a>
                 ))}
-                <a href={`/collections/${cat.handle}`} class="drawer-sub-link drawer-view-all">
-                  View all {cat.label} &rarr;
+                <a href={lp(`/collections/${cat.handle}`)} class="drawer-sub-link drawer-view-all">
+                  {t("mega.viewAll", { category: getCategoryLabel(cat, lang) })}
                 </a>
               </div>
             )}
           </div>
         ))}
 
-        <!-- ── Thick divider ── -->
-        <div class="drawer-band"></div>
-
-        <!-- ── Information / Pages ── -->
-        <p class="drawer-section-label">Information</p>
-
-        <a href="/" class="drawer-page-link">Home</a>
-        <a href="/pages/about-us" class="drawer-page-link">About Us</a>
-        <a href="/pages/working-hours" class="drawer-page-link">Working Hours</a>
-        <a href="/pages/shipping-delivery" class="drawer-page-link">Shipping &amp; Delivery</a>
-        <a href="/pages/refund-cancellation-policy" class="drawer-page-link">Refund &amp; Cancellation Policy</a>
-        <a href="/pages/cookies-policy" class="drawer-page-link">Cookies Policy</a>
-        <a href="/pages/terms-and-conditions" class="drawer-page-link">Terms &amp; Conditions</a>
-        <a href="/pages/terms-of-service" class="drawer-page-link">Terms of Service</a>
-        <a href="/pages/legal-notice" class="drawer-page-link">Legal Notice</a>
-
       </nav>
 
       <!-- Footer: account + lang -->
       <div class="drawer-footer">
-        <a href="/account" class="drawer-footer-link">
+        <a href={lp("/account")} class="drawer-footer-link">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
             <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
           </svg>
-          My Account
+          {lang === "el" ? "Ο Λογαριασμός μου" : "My Account"}
         </a>
-        <div class="drawer-lang">
-          <span class="lang-active">EN</span>
+        <a href={switchHref} class="drawer-lang" aria-label={t("header.switchLanguage")}>
+          <span class={lang === "en" ? "lang-active" : "lang-inactive"}>EN</span>
           <span class="lang-sep">/</span>
-          <span class="lang-inactive">GR</span>
-        </div>
+          <span class={lang === "el" ? "lang-active" : "lang-inactive"}>GR</span>
+        </a>
       </div>
 
     </div>
@@ -484,11 +450,11 @@ function shopifyThumb(url: string, w = 300) {
         <div class="footer-inner">
           <!-- Column 1: Contact -->
           <div class="footer-col">
-            <h3 class="footer-heading">Contact</h3>
+            <h3 class="footer-heading">{t("footer.contact")}</h3>
             <ul class="footer-list">
               <li>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>
-                Limassol, Cyprus
+                <a href={lp("/pages/find-us")}>{t("footer.address")}</a>
               </li>
               <li>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
@@ -500,29 +466,30 @@ function shopifyThumb(url: string, w = 300) {
               </li>
               <li>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                Mon – Fri: 9:00 – 18:00
+                {t("footer.hours")}
               </li>
             </ul>
           </div>
 
           <!-- Column 2: Pages -->
           <div class="footer-col">
-            <h3 class="footer-heading">Pages</h3>
+            <h3 class="footer-heading">{t("footer.pages")}</h3>
             <ul class="footer-list">
-              <li><a href="/pages/about-us">About Us</a></li>
-              <li><a href="/pages/working-hours">Working Hours</a></li>
-              <li><a href="/pages/shipping-delivery">Shipping & Delivery</a></li>
-              <li><a href="/pages/refund-cancellation-policy">Refund & Cancellation Policy</a></li>
-              <li><a href="/pages/cookies-policy">Cookies Policy</a></li>
-              <li><a href="/pages/terms-and-conditions">Terms & Conditions</a></li>
-              <li><a href="/pages/terms-of-service">Terms of Service</a></li>
-              <li><a href="/pages/legal-notice">Legal Notice</a></li>
+              <li><a href={lp("/pages/about-us")}>{t("nav.aboutUs")}</a></li>
+              <li><a href={lp("/pages/working-hours")}>{t("nav.workingHours")}</a></li>
+              <li><a href={lp("/pages/find-us")}>{t("nav.findUs")}</a></li>
+              <li><a href={lp("/pages/shipping-delivery")}>{t("nav.shippingDelivery")}</a></li>
+              <li><a href={lp("/pages/refund-cancellation-policy")}>{t("nav.refundPolicy")}</a></li>
+              <li><a href={lp("/pages/cookies-policy")}>{t("nav.cookiesPolicy")}</a></li>
+              <li><a href={lp("/pages/terms-and-conditions")}>{t("nav.termsConditions")}</a></li>
+              <li><a href={lp("/pages/terms-of-service")}>{t("nav.termsOfService")}</a></li>
+              <li><a href={lp("/pages/legal-notice")}>{t("nav.legalNotice")}</a></li>
             </ul>
           </div>
 
           <!-- Column 3: Secure Payments -->
           <div class="footer-col">
-            <h3 class="footer-heading">Secure Payments</h3>
+            <h3 class="footer-heading">{t("footer.securePayments")}</h3>
 
             <!-- Payment icons -->
             <div class="payment-icons">
@@ -577,14 +544,13 @@ function shopifyThumb(url: string, w = 300) {
 
             <!-- Newsletter -->
             <p class="footer-newsletter-text">
-              By entering your email address below, you consent to receiving our newsletter with
-              access to our latest collections, events and initiatives.
+              {t("footer.newsletterConsent")}
             </p>
             <div class="footer-newsletter">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18" class="footer-newsletter-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
               </svg>
-              <input type="email" class="footer-newsletter-input" placeholder="Enter your email" aria-label="Enter your email for newsletter" />
+              <input type="email" class="footer-newsletter-input" placeholder={t("footer.emailPlaceholder")} aria-label={t("footer.emailAriaLabel")} />
             </div>
 
           </div>
@@ -595,14 +561,14 @@ function shopifyThumb(url: string, w = 300) {
       <!-- Copyright bar -->
       <div class="footer-bottom">
         <div class="footer-bottom-inner">
-          <p>&copy; {new Date().getFullYear()} OrthoHouse Cyprus. All rights reserved.</p>
+          <p>{t("footer.copyright", { year: new Date().getFullYear() })}</p>
           <div class="footer-powered">
-            Powered by <a href="https://www.itdev.gr/" target="_blank" rel="noopener noreferrer">IT DEV</a>
+            {lang === "el" ? "Με την υποστήριξη" : "Powered by"} <a href="https://www.itdev.gr/" target="_blank" rel="noopener noreferrer">IT DEV</a>
           </div>
           <div class="footer-bottom-links">
-            <a href="/pages/privacy-policy">Privacy Policy</a>
-            <a href="/pages/terms-of-service">Terms of Service</a>
-            <a href="/pages/refund-policy">Refund Policy</a>
+            <a href={lp("/pages/privacy-policy")}>{t("footer.privacyPolicy")}</a>
+            <a href={lp("/pages/terms-of-service")}>{t("nav.termsOfService")}</a>
+            <a href={lp("/pages/refund-policy")}>{lang === "el" ? "Πολιτική Επιστροφών" : "Refund Policy"}</a>
           </div>
         </div>
       </div>
@@ -827,35 +793,14 @@ function shopifyThumb(url: string, w = 300) {
         if (!e.target.closest(".cat-bar")) {
           closeAllPanels();
         }
-        if (!e.target.closest(".pages-menu")) {
-          closePagesMenu();
-        }
       });
 
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") {
           closeAllPanels();
-          closePagesMenu();
           closeDrawer();
         }
       });
-
-      /* ── Pages menu dropdown ── */
-      var pagesMenuBtn = document.getElementById("pages-menu-btn");
-      var pagesMenuDropdown = document.getElementById("pages-menu-dropdown");
-
-      function closePagesMenu() {
-        if (pagesMenuBtn) pagesMenuBtn.setAttribute("aria-expanded", "false");
-        if (pagesMenuDropdown) pagesMenuDropdown.classList.remove("is-open");
-      }
-
-      if (pagesMenuBtn) {
-        pagesMenuBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          closeAllPanels();
-          openDrawer();
-        });
-      }
 
       /* ── Mobile drawer ── */
       var hamburgerBtn = document.getElementById("hamburger-btn");
@@ -990,84 +935,6 @@ function shopifyThumb(url: string, w = 300) {
     display: block;
   }
 
-  /* ── Pages menu (hamburger + "Menu" right of logo) ── */
-  .pages-menu {
-    position: relative;
-  }
-  .pages-menu-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.62rem;
-    padding: 0.62rem 1.24rem;
-    font-size: 1.24rem;
-    font-weight: 600;
-    color: #1e3a5f;
-    background: none;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s;
-    white-space: nowrap;
-  }
-  .pages-menu-btn:hover {
-    background: #f0f4ff;
-  }
-  .pages-menu-btn[aria-expanded="true"] {
-    background: #f0f4ff;
-  }
-  .pages-menu-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    min-width: 240px;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    z-index: 150;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-4px);
-    transition: opacity 0.18s, visibility 0.18s, transform 0.18s;
-    padding: 0.5rem 0;
-    max-height: 80vh;
-    overflow-y: auto;
-  }
-  .pages-menu-dropdown.is-open {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-  }
-  /* Section header labels (e.g. "Categories", "Pages") */
-  .pages-menu-section {
-    display: block;
-    padding: 0.55rem 1.25rem 0.2rem;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #999;
-  }
-  /* Divider between sections */
-  .pages-menu-divider {
-    border: none;
-    border-top: 1px solid #f0f0f0;
-    margin: 0.4rem 0;
-  }
-  .pages-menu-link {
-    display: block;
-    padding: 0.62rem 1.25rem;
-    font-size: 0.92rem;
-    color: #333;
-    text-decoration: none;
-    transition: background 0.12s, color 0.12s;
-  }
-  .pages-menu-link:hover {
-    background: #f0f4ff;
-    color: #1e3a5f;
-  }
-
   /* ── Search bar (center) ── */
   .top-search {
     flex: 1;
@@ -1180,22 +1047,18 @@ function shopifyThumb(url: string, w = 300) {
   .cat-bar-inner {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 0.25rem;
+    justify-content: center;
+    gap: 0.5rem 1rem;
     max-width: 1400px;
     margin: 0 auto;
-    height: 79px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .cat-bar-inner::-webkit-scrollbar {
-    display: none;
+    min-height: 79px;
+    padding: 0.5rem 0;
+    flex-wrap: wrap;
   }
   .cat-item {
     position: static;
     border-right: 2px solid rgba(255, 255, 255, 0.3);
-    padding-right: 0.5rem;
+    padding-right: 1rem;
   }
   .cat-item:last-child {
     border-right: none;
@@ -1204,9 +1067,9 @@ function shopifyThumb(url: string, w = 300) {
   .cat-trigger {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.65rem 0.75rem;
-    font-size: 0.88rem;
+    gap: 0.55rem;
+    padding: 0.55rem 1.1rem;
+    font-size: 1rem;
     font-weight: 500;
     color: #fff;
     background: transparent;
@@ -1536,7 +1399,6 @@ function shopifyThumb(url: string, w = 300) {
     .hamburger-btn { display: flex; }
     .mobile-search-btn { display: flex; }
     .nav-logo-img { height: 52px; }
-    .pages-menu { display: none; }
     .top-search { display: none; }
 
     /* Overlay mobile tweaks */
