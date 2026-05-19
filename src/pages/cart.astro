@@ -244,12 +244,38 @@ const crumbs = [
     return edge ? edge.node.quantity : 0;
   }
 
-  // Track in-flight requests per line so rapid clicks don't race.
-  var inFlight = Object.create(null);
-  function withLock(lineId, fn) {
-    if (inFlight[lineId]) return;
-    inFlight[lineId] = true;
-    Promise.resolve(fn()).finally(function () { delete inFlight[lineId]; });
+  // Debounce + accumulate: rapid +/- clicks coalesce into one request with
+  // the final delta. Prevents races AND honours user intent ("+++ = +3").
+  var pendingDelta = Object.create(null);
+  var debounceTimer = Object.create(null);
+
+  function flushLine(lineId) {
+    var delta = pendingDelta[lineId] || 0;
+    delete pendingDelta[lineId];
+    delete debounceTimer[lineId];
+    if (!delta) return;
+    var target = liveQty(lineId) + delta;
+    if (target <= 0) {
+      Cart.removeLines([lineId]).catch(function (err) { console.error(err); });
+    } else {
+      Cart.updateLine(lineId, target).catch(function (err) { console.error(err); });
+    }
+  }
+
+  function schedule(lineId, delta) {
+    pendingDelta[lineId] = (pendingDelta[lineId] || 0) + delta;
+    // Optimistic UI: update the displayed qty immediately so the user sees
+    // their clicks register before the network round-trip.
+    var line = linesEl.querySelector('[data-line-id="' + CSS.escape(lineId) + '"]');
+    if (line) {
+      var disp = line.querySelector(".qty-value");
+      if (disp) {
+        var optimistic = liveQty(lineId) + pendingDelta[lineId];
+        disp.textContent = Math.max(1, optimistic);
+      }
+    }
+    clearTimeout(debounceTimer[lineId]);
+    debounceTimer[lineId] = setTimeout(function () { flushLine(lineId); }, 250);
   }
 
   // Quantity and remove handlers (event delegation)
@@ -257,23 +283,18 @@ const crumbs = [
     var btn = e.target.closest("[data-action]");
     if (btn) {
       var lineId = btn.dataset.lineId;
-      var qty = liveQty(lineId);
-      withLock(lineId, function () {
-        if (btn.dataset.action === "inc") {
-          return Cart.updateLine(lineId, qty + 1);
-        } else if (btn.dataset.action === "dec") {
-          return qty > 1
-            ? Cart.updateLine(lineId, qty - 1)
-            : Cart.removeLines([lineId]);
-        }
-      });
+      schedule(lineId, btn.dataset.action === "inc" ? 1 : -1);
       return;
     }
 
     var removeBtn = e.target.closest(".remove-btn");
     if (removeBtn) {
       var rid = removeBtn.dataset.lineId;
-      withLock(rid, function () { return Cart.removeLines([rid]); });
+      // Flush any pending qty changes for this line, then remove.
+      clearTimeout(debounceTimer[rid]);
+      delete debounceTimer[rid];
+      delete pendingDelta[rid];
+      Cart.removeLines([rid]).catch(function (err) { console.error(err); });
     }
   });
 
