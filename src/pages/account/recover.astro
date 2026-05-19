@@ -1,0 +1,73 @@
+---
+import AccountLayout from "../../components/AccountLayout.astro";
+import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const lp = (p: string) => localizeHref(p, lang);
+---
+
+<AccountLayout section="dashboard" pageTitle={t("account.recover.title")} publicAuth>
+  <h1 class="acc-h1">{t("account.recover.title")}</h1>
+  <p class="acc-muted">{t("account.recover.subtitle")}</p>
+
+  <div id="rec-alert" class="acc-alert" role="status"></div>
+
+  <form id="rec-form" class="acc-form" novalidate>
+    <div class="acc-field">
+      <label class="acc-label" for="rec-email">{t("account.recover.email")}</label>
+      <input class="acc-input" id="rec-email" name="email" type="email" autocomplete="email" required />
+    </div>
+    <div>
+      <button class="acc-btn" id="rec-submit" type="submit">{t("account.recover.submit")}</button>
+    </div>
+    <div style="margin-top:0.5rem;">
+      <a class="acc-link" href={lp("/account/login")}>← {t("account.recover.back")}</a>
+    </div>
+  </form>
+</AccountLayout>
+
+<script is:inline data-msg-sent={t("account.recover.sent")} data-err-generic={t("account.error.generic")}>
+  (function () {
+    var script = document.currentScript;
+    var msgSent = script.dataset.msgSent;
+    var errGeneric = script.dataset.errGeneric;
+    function ready(fn) {
+      if (document.readyState !== "loading") fn();
+      else document.addEventListener("DOMContentLoaded", fn);
+    }
+    ready(function () {
+      var form = document.getElementById("rec-form");
+      var alertEl = document.getElementById("rec-alert");
+      var submit = document.getElementById("rec-submit");
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        alertEl.classList.remove("show", "acc-alert-error", "acc-alert-success");
+        alertEl.textContent = "";
+        if (!window.Customer) return;
+        var email = form.email.value.trim();
+        if (!email) return;
+        submit.disabled = true;
+        var orig = submit.textContent;
+        submit.textContent = "…";
+        window.Customer.recover(email)
+          .then(function () {
+            alertEl.classList.add("acc-alert-success", "show");
+            alertEl.textContent = msgSent;
+            form.email.value = "";
+          })
+          .catch(function (err) {
+            // Even on error, show the generic success message to prevent email enumeration.
+            // We still log to console for debugging.
+            console.error("Recover error:", err);
+            alertEl.classList.add("acc-alert-success", "show");
+            alertEl.textContent = msgSent;
+          })
+          .finally(function () {
+            submit.disabled = false;
+            submit.textContent = orig;
+          });
+      });
+    });
+  })();
+</script>

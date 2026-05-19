@@ -1,0 +1,93 @@
+---
+// Password reset landing page.
+// Shopify sends customers an email with a link like:
+//   https://<store>/account/reset/<customerId>/<token>
+// We catch that link client-side via the ?url= query param, since
+// our reset page lives at /account/reset and we ask the customer to
+// paste the original reset URL OR we redirect them automatically
+// (the recommended pattern: configure Shopify to send users to
+//  https://orthohouse.com.cy/account/reset?url=<reset-url>).
+import AccountLayout from "../../components/AccountLayout.astro";
+import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const lp = (p: string) => localizeHref(p, lang);
+---
+
+<AccountLayout section="dashboard" pageTitle={t("account.reset.title")} publicAuth>
+  <h1 class="acc-h1">{t("account.reset.title")}</h1>
+  <p class="acc-muted">{t("account.reset.subtitle")}</p>
+
+  <div id="reset-alert" class="acc-alert acc-alert-error" role="alert"></div>
+
+  <form id="reset-form" class="acc-form" novalidate>
+    <div class="acc-field">
+      <label class="acc-label" for="reset-password">{t("account.reset.password")}</label>
+      <input class="acc-input" id="reset-password" name="password" type="password" autocomplete="new-password" minlength="5" required />
+    </div>
+    <div class="acc-field">
+      <label class="acc-label" for="reset-confirm">{t("account.reset.passwordConfirm")}</label>
+      <input class="acc-input" id="reset-confirm" name="confirm" type="password" autocomplete="new-password" minlength="5" required />
+    </div>
+    <div>
+      <button class="acc-btn" id="reset-submit" type="submit">{t("account.reset.submit")}</button>
+    </div>
+  </form>
+</AccountLayout>
+
+<script is:inline data-dashboard-href={lp("/account")} data-msg-mismatch={t("account.reset.mismatch")} data-msg-invalid={t("account.reset.invalidLink")} data-err-generic={t("account.error.generic")}>
+  (function () {
+    var script = document.currentScript;
+    var dashboard = script.dataset.dashboardHref;
+    var msgMismatch = script.dataset.msgMismatch;
+    var msgInvalid = script.dataset.msgInvalid;
+    var errGeneric = script.dataset.errGeneric;
+
+    function ready(fn) {
+      if (document.readyState !== "loading") fn();
+      else document.addEventListener("DOMContentLoaded", fn);
+    }
+    function getQueryParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+    ready(function () {
+      var resetUrl = getQueryParam("url");
+      var form = document.getElementById("reset-form");
+      var alertEl = document.getElementById("reset-alert");
+      var submit = document.getElementById("reset-submit");
+
+      if (!resetUrl) {
+        alertEl.classList.add("show");
+        alertEl.textContent = msgInvalid;
+        submit.disabled = true;
+        return;
+      }
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        alertEl.classList.remove("show");
+        alertEl.textContent = "";
+        var pw = form.password.value;
+        var cf = form.confirm.value;
+        if (pw !== cf) {
+          alertEl.textContent = msgMismatch;
+          alertEl.classList.add("show");
+          return;
+        }
+        if (!window.Customer) return;
+        submit.disabled = true;
+        var orig = submit.textContent;
+        submit.textContent = "…";
+        window.Customer.resetByUrl(resetUrl, pw)
+          .then(function () { window.location.replace(dashboard); })
+          .catch(function (err) {
+            console.error("Reset failed:", err);
+            alertEl.textContent = (err && err.message) || errGeneric;
+            alertEl.classList.add("show");
+            submit.disabled = false;
+            submit.textContent = orig;
+          });
+      });
+    });
+  })();
+</script>

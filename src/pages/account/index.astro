@@ -1,0 +1,119 @@
+---
+import AccountLayout from "../../components/AccountLayout.astro";
+import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const lp = (p: string) => localizeHref(p, lang);
+---
+
+<AccountLayout section="dashboard" pageTitle={t("account.dashboard")}>
+  <h1 class="acc-h1" id="acc-greeting">{t("account.welcomeAnon")}</h1>
+  <p class="acc-muted" id="acc-greeting-email"></p>
+
+  <div class="acc-section">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;flex-wrap:wrap;">
+      <h2 class="acc-section-title">{t("account.recentOrders")}</h2>
+      <a class="acc-link" href={lp("/account/orders")}>{t("account.viewAllOrders")} →</a>
+    </div>
+    <div id="acc-orders-mini"></div>
+  </div>
+
+  <div class="acc-section">
+    <h2 class="acc-section-title">{t("account.defaultAddress")}</h2>
+    <div id="acc-default-address">
+      <p class="acc-muted">—</p>
+    </div>
+  </div>
+</AccountLayout>
+
+<script is:inline
+  data-welcome-template={t("account.welcome")}
+  data-no-orders={t("account.noOrdersYet")}
+  data-start-shopping={t("account.startShopping")}
+  data-shop-href={lp("/")}
+  data-order-number-template={t("account.orders.orderNumber")}
+  data-placed-template={t("account.orders.placedOn")}
+  data-currency-locale={lang === "el" ? "el-CY" : "en-CY"}>
+  (function () {
+    var script = document.currentScript;
+    var welcomeT = script.dataset.welcomeTemplate;
+    var noOrders = script.dataset.noOrders;
+    var startShopping = script.dataset.startShopping;
+    var shopHref = script.dataset.shopHref;
+    var orderNumT = script.dataset.orderNumberTemplate;
+    var placedT = script.dataset.placedTemplate;
+    var locale = script.dataset.currencyLocale;
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+      });
+    }
+    function fmtDate(iso) {
+      try { return new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }); }
+      catch (e) { return iso; }
+    }
+    function fmtMoney(amount, currency) {
+      try { return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "EUR" }).format(parseFloat(amount)); }
+      catch (e) { return (currency || "") + " " + amount; }
+    }
+    function render(c) {
+      var greeting = document.getElementById("acc-greeting");
+      var emailEl = document.getElementById("acc-greeting-email");
+      var ordersEl = document.getElementById("acc-orders-mini");
+      var addrEl = document.getElementById("acc-default-address");
+
+      if (!c) {
+        greeting.textContent = "Loading…";
+        return;
+      }
+      var name = c.firstName ? c.firstName : c.email;
+      greeting.textContent = welcomeT.replace("{name}", name);
+      emailEl.textContent = c.email || "";
+
+      // Orders mini
+      var orders = (c.orders || []).slice(0, 3);
+      if (orders.length === 0) {
+        ordersEl.innerHTML = '<p class="acc-muted">' + escapeHtml(noOrders) + '</p>' +
+          '<a class="acc-btn acc-btn-ghost" href="' + escapeHtml(shopHref) + '">' + escapeHtml(startShopping) + '</a>';
+      } else {
+        ordersEl.innerHTML = orders.map(function (o) {
+          var totalAmt = (o.totalPrice && o.totalPrice.amount) || "0";
+          var cur = (o.totalPrice && o.totalPrice.currencyCode) || "EUR";
+          return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.6rem 0;border-bottom:1px solid #f1f5fb;flex-wrap:wrap;gap:0.5rem;">' +
+            '<div>' +
+              '<div style="font-weight:600;color:#1e3a5f;">' + escapeHtml(orderNumT.replace("{number}", o.orderNumber)) + '</div>' +
+              '<div class="acc-muted" style="font-size:0.85rem;">' + escapeHtml(placedT.replace("{date}", fmtDate(o.processedAt))) + '</div>' +
+            '</div>' +
+            '<div style="font-weight:600;color:#1e3a5f;">' + escapeHtml(fmtMoney(totalAmt, cur)) + '</div>' +
+          '</div>';
+        }).join("");
+      }
+
+      // Default address
+      if (c.defaultAddress && c.defaultAddress.formatted) {
+        addrEl.innerHTML = c.defaultAddress.formatted.map(escapeHtml).join("<br>");
+      } else {
+        addrEl.innerHTML = '<p class="acc-muted">—</p>';
+      }
+    }
+
+    function ready(fn) {
+      if (document.readyState !== "loading") fn();
+      else document.addEventListener("DOMContentLoaded", fn);
+    }
+    ready(function () {
+      // The AccountLayout auth gate has already redirected to /login if no token.
+      function tryRender() {
+        if (window.__customer) { render(window.__customer); return true; }
+        return false;
+      }
+      if (!tryRender()) {
+        document.addEventListener("customer:changed", function (e) { render(e.detail); });
+        // Also trigger a refresh if Customer is ready but __customer null.
+        if (window.Customer) window.Customer.refresh();
+      }
+    });
+  })();
+</script>

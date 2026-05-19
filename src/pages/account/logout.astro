@@ -1,0 +1,34 @@
+---
+import AccountLayout from "../../components/AccountLayout.astro";
+import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const lp = (p: string) => localizeHref(p, lang);
+---
+
+<AccountLayout section="dashboard" pageTitle={t("account.logout")} publicAuth>
+  <h1 class="acc-h1">{t("account.logout")}</h1>
+  <p id="logout-msg" class="acc-muted">{t("account.logout.message")}</p>
+</AccountLayout>
+
+<script is:inline data-home={lp("/")}>
+  (function () {
+    var home = document.currentScript.dataset.home;
+    function done() { window.location.replace(home); }
+    function ready(fn) {
+      if (document.readyState !== "loading") fn();
+      else document.addEventListener("DOMContentLoaded", fn);
+    }
+    ready(function () {
+      // Give the script a moment to load; if Customer not present, just clear localStorage.
+      if (window.Customer && typeof window.Customer.logout === "function") {
+        window.Customer.logout().then(done).catch(done);
+      } else {
+        localStorage.removeItem("sf_customer_token");
+        localStorage.removeItem("sf_customer_token_expires");
+        done();
+      }
+    });
+  })();
+</script>

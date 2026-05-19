@@ -136,11 +136,12 @@ function shopifyThumb(url: string, w = 300) {
               <span class={lang === "el" ? "lang-active" : "lang-inactive"}>GR</span>
             </a>
 
-            <!-- Profile icon -->
-            <a href={lp("/account")} class="top-icon-btn top-profile" aria-label={t("header.account")}>
+            <!-- Profile icon (links to /account — auth gate handles login redirect) -->
+            <a href={lp("/account")} id="top-profile-link" class="top-icon-btn top-profile" aria-label={t("header.account")}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               </svg>
+              <span class="top-profile-dot" id="top-profile-dot" hidden></span>
             </a>
 
             <!-- Cart -->
@@ -593,6 +594,23 @@ function shopifyThumb(url: string, w = 300) {
       try { window.__shopifyConfig = JSON.parse(document.getElementById("shopify-config").textContent); } catch {}
     </script>
     <script src="/cart.js" defer></script>
+    <script src="/account.js" defer></script>
+    <script is:inline>
+      // Account indicator: green dot when logged in, hidden otherwise.
+      (function () {
+        function applyIndicator() {
+          var dot = document.getElementById("top-profile-dot");
+          if (!dot) return;
+          var hasToken = !!localStorage.getItem("sf_customer_token");
+          var exp = localStorage.getItem("sf_customer_token_expires");
+          if (exp && new Date(exp).getTime() < Date.now()) hasToken = false;
+          dot.hidden = !hasToken;
+        }
+        if (document.readyState !== "loading") applyIndicator();
+        else document.addEventListener("DOMContentLoaded", applyIndicator);
+        document.addEventListener("customer:changed", applyIndicator);
+      })();
+    </script>
 
     {swrData && (
       <script
@@ -1043,6 +1061,20 @@ function shopifyThumb(url: string, w = 300) {
     text-align: center;
     border-radius: 9px;
     padding: 0 4px;
+  }
+
+  /* Logged-in indicator on profile icon */
+  .top-profile { position: relative; }
+  .top-profile-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 9px;
+    height: 9px;
+    background: #16a34a;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-sizing: content-box;
   }
 
   /* Hamburger — hidden on desktop */

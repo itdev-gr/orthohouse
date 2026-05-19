@@ -22,8 +22,8 @@ const crumbs = [
       <p>{isEl ? "Φόρτωση καλαθιού…" : "Loading cart…"}</p>
     </div>
     <div id="cart-empty" class="cart-empty" style="display:none">
-      <p>{isEl ? "Το καλάθι σας είναι άδειο." : "Your cart is empty."}</p>
-      <a href={lp("/")} class="continue-link">&larr; {isEl ? "Συνέχιση αγορών" : "Continue shopping"}</a>
+      <p>{t("cart.empty")}</p>
+      <a href={lp("/")} class="continue-link">&larr; {t("cart.continueShopping")}</a>
     </div>
     <div id="cart-content" style="display:none">
       <div id="cart-lines"></div>
@@ -234,27 +234,46 @@ const crumbs = [
     renderCart(e.detail);
   });
 
+  // Read live qty from window.__cart (source of truth) rather than DOM
+  // attribute, which can be stale when the user clicks faster than the
+  // network round-trip can re-render.
+  function liveQty(lineId) {
+    var c = window.__cart;
+    if (!c || !c.lines) return 0;
+    var edge = c.lines.edges.find(function (e) { return e.node.id === lineId; });
+    return edge ? edge.node.quantity : 0;
+  }
+
+  // Track in-flight requests per line so rapid clicks don't race.
+  var inFlight = Object.create(null);
+  function withLock(lineId, fn) {
+    if (inFlight[lineId]) return;
+    inFlight[lineId] = true;
+    Promise.resolve(fn()).finally(function () { delete inFlight[lineId]; });
+  }
+
   // Quantity and remove handlers (event delegation)
   linesEl.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-action]");
     if (btn) {
       var lineId = btn.dataset.lineId;
-      var qty = parseInt(btn.dataset.qty, 10);
-      if (btn.dataset.action === "inc") {
-        Cart.updateLine(lineId, qty + 1);
-      } else if (btn.dataset.action === "dec") {
-        if (qty > 1) {
-          Cart.updateLine(lineId, qty - 1);
-        } else {
-          Cart.removeLines([lineId]);
+      var qty = liveQty(lineId);
+      withLock(lineId, function () {
+        if (btn.dataset.action === "inc") {
+          return Cart.updateLine(lineId, qty + 1);
+        } else if (btn.dataset.action === "dec") {
+          return qty > 1
+            ? Cart.updateLine(lineId, qty - 1)
+            : Cart.removeLines([lineId]);
         }
-      }
+      });
       return;
     }
 
     var removeBtn = e.target.closest(".remove-btn");
     if (removeBtn) {
-      Cart.removeLines([removeBtn.dataset.lineId]);
+      var rid = removeBtn.dataset.lineId;
+      withLock(rid, function () { return Cart.removeLines([rid]); });
     }
   });
 
