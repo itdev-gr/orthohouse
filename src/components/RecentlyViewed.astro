@@ -1,0 +1,98 @@
+---
+import { pickLang, useTranslations } from "../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const localePrefix = lang === "el" ? "/el" : "";
+---
+
+<section class="recently-viewed" id="recently-viewed-section" hidden data-locale-prefix={localePrefix}>
+  <h2 class="recently-viewed__title">{t("product.recentlyViewed")}</h2>
+  <div class="recently-viewed__track" id="recently-viewed-track"></div>
+</section>
+
+<style>
+  .recently-viewed {
+    max-width: 1200px;
+    margin: 3rem auto;
+    padding: 0 1.5rem;
+  }
+  .recently-viewed__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 0 0 1rem;
+  }
+  .recently-viewed__track {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+  :global(.rv-card) {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: box-shadow .15s, transform .15s;
+  }
+  :global(.rv-card:hover) { box-shadow: 0 6px 16px rgba(15,23,42,.08); transform: translateY(-2px); }
+  :global(.rv-card img) { width: 100%; height: 140px; object-fit: contain; background: #fff; display: block; }
+  :global(.rv-card__body) { padding: 0.6rem 0.75rem 0.75rem; }
+  :global(.rv-card__title) {
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0 0 0.3rem;
+    color: #1e3a5f;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  :global(.rv-card__price) { font-size: 0.8rem; color: #2563eb; margin: 0; font-weight: 600; }
+</style>
+
+<script is:inline>
+  (function () {
+    var section = document.getElementById("recently-viewed-section");
+    if (!section) return;
+    var track = document.getElementById("recently-viewed-track");
+    var prefix = section.dataset.localePrefix || "";
+
+    var KEY = "ohc:recently-viewed";
+    var items = [];
+    try {
+      items = JSON.parse(localStorage.getItem(KEY) || "[]");
+    } catch (e) { items = []; }
+
+    var meta = document.getElementById("product-meta");
+    var currentHandle = (meta && meta.dataset && meta.dataset.handle) || null;
+    var filtered = items.filter(function (it) { return it && it.handle && it.handle !== currentHandle; });
+
+    if (filtered.length === 0) return;
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+      });
+    }
+
+    track.innerHTML = filtered.slice(0, 8).map(function (it) {
+      var price = (typeof it.price === "number" && it.currency) ? (it.currency + " " + it.price.toFixed(2)) : "";
+      var img = it.image ? '<img src="' + escapeHtml(it.image) + '" alt="' + escapeHtml(it.title || "") + '" loading="lazy">' : "";
+      var title = escapeHtml(it.title || "");
+      var href = prefix + "/products/" + encodeURIComponent(it.handle);
+      return '<a class="rv-card" href="' + href + '">' +
+        img +
+        '<div class="rv-card__body">' +
+        '<p class="rv-card__title">' + title + '</p>' +
+        (price ? '<p class="rv-card__price">' + price + '</p>' : "") +
+        '</div></a>';
+    }).join("");
+
+    section.hidden = false;
+  })();
+</script>

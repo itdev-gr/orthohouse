@@ -1,13 +1,20 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { pickLang, localizeHref } from "../i18n/utils";
+import Breadcrumb from "../components/Breadcrumb.astro";
+import { pickLang, useTranslations, localizeHref } from "../i18n/utils";
 
 const lang = pickLang(Astro.currentLocale, Astro.url);
 const isEl = lang === "el";
 const lp = (p: string) => localizeHref(p, lang);
+const t = useTranslations(lang);
+const crumbs = [
+  { label: t("nav.home"), href: lp("/") },
+  { label: t("cart.title"), href: null },
+];
 ---
 
 <Layout title={isEl ? "Καλάθι" : "Cart"}>
+  <Breadcrumb crumbs={crumbs} />
   <h1 class="page-title">{isEl ? "Το Καλάθι σας" : "Your Cart"}</h1>
 
   <div id="cart-container" data-lang={lang}>

@@ -13,6 +13,9 @@ import {
   getSubLabel,
   getSubDescription,
 } from "../../lib/menuConfig";
+import { QUOTATION_COLLECTION_HANDLES } from "../../lib/quotationCollections";
+import RecentlyViewed from "../../components/RecentlyViewed.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
 import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
 
 export async function getStaticPaths() {
@@ -60,6 +63,29 @@ const titlePosition = navCategory?.banner?.titlePosition ?? "bottom-left";
 const bannerImage = navCategory?.banner?.image;
 const supplierLogos = navCategory?.supplierLogos ?? [];
 const subcategories = navCategory?.children ?? [];
+const isQuoteCollection = QUOTATION_COLLECTION_HANDLES.has(handle!);
+
+// Breadcrumb crumbs: Home > Products > [Parent if subcat] > Current
+function buildCollectionCrumbs() {
+  const crumbs: { label: string; href: string | null }[] = [
+    { label: t("nav.home"), href: lp("/") },
+    { label: lang === "el" ? "Προϊόντα" : "Products", href: lp("/#cat-section") },
+  ];
+  if (isTopLevel) {
+    crumbs.push({ label: pageTitle, href: null });
+  } else {
+    const parent = NAV_CATEGORIES.find((c) => c.children.some((ch) => ch.handle === handle));
+    if (parent) {
+      crumbs.push({
+        label: getCategoryLabel(parent, lang),
+        href: lp(`/collections/${parent.handle}`),
+      });
+    }
+    crumbs.push({ label: pageTitle, href: null });
+  }
+  return crumbs;
+}
+const collectionCrumbs = buildCollectionCrumbs();
 ---
 
 <Layout
@@ -71,6 +97,7 @@ const subcategories = navCategory?.children ?? [];
     extract: "collection.products.nodes",
   } : undefined}
 >
+  <Breadcrumb crumbs={collectionCrumbs} />
   {isTopLevel ? (
     <>
       <section
@@ -129,9 +156,9 @@ const subcategories = navCategory?.children ?? [];
         </section>
       )}
 
-      {products.length > 0 && (
+      {handle === "orthopedic-braces-supports" && products.length > 0 && (
         <section class="products-section">
-          <h2 class="section-heading">{t("collection.featuredProducts")}</h2>
+          <h2 class="section-heading">{t("collection.allOrthopaedicProducts")}</h2>
           <div class="grid" id="swr-target">
             {products.map((product: any) => (
               <a class="card" href={lp(`/products/${product.handle}`)}>
@@ -147,10 +174,17 @@ const subcategories = navCategory?.children ?? [];
                 </div>
                 <div class="info">
                   <h3 class="card-title">{product.title}</h3>
-                  <p class="price">
-                    {product.priceRange.minVariantPrice.currencyCode}{" "}
-                    {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
-                  </p>
+                  <span class={"stock-pill " + (product.availableForSale ? "in" : "out")}>
+                    {product.availableForSale ? t("card.inStock") : t("card.outOfStock")}
+                  </span>
+                  {isQuoteCollection ? (
+                    <p class="price price-quote-card">{t("product.contactForQuote")}</p>
+                  ) : (
+                    <p class="price">
+                      {product.priceRange.minVariantPrice.currencyCode}{" "}
+                      {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+                    </p>
+                  )}
                   <div class="card-cta">
                     {t("collection.viewProduct")}
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
@@ -189,10 +223,17 @@ const subcategories = navCategory?.children ?? [];
             </div>
             <div class="info">
               <h2 class="card-title">{product.title}</h2>
-              <p class="price">
-                {product.priceRange.minVariantPrice.currencyCode}{" "}
-                {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
-              </p>
+              <span class={"stock-pill " + (product.availableForSale ? "in" : "out")}>
+                {product.availableForSale ? t("card.inStock") : t("card.outOfStock")}
+              </span>
+              {isQuoteCollection ? (
+                <p class="price price-quote-card">{t("product.contactForQuote")}</p>
+              ) : (
+                <p class="price">
+                  {product.priceRange.minVariantPrice.currencyCode}{" "}
+                  {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+                </p>
+              )}
               <div class="card-cta">
                 {t("collection.viewProduct")}
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="14" height="14">
@@ -205,6 +246,7 @@ const subcategories = navCategory?.children ?? [];
       </div>
     </>
   )}
+  <RecentlyViewed />
 </Layout>
 
 <style>
@@ -463,6 +505,25 @@ const subcategories = navCategory?.children ?? [];
     color: #1e3a5f;
     margin: 0 0 0.75rem 0;
   }
+  .price-quote-card {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    line-height: 1.3;
+  }
+  .stock-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    margin-bottom: 0.4rem;
+    align-self: flex-start;
+  }
+  .stock-pill.in  { background: #ecfdf5; color: #047857; }
+  .stock-pill.out { background: #fef2f2; color: #b91c1c; }
   .card-cta {
     display: inline-flex;
     align-items: center;

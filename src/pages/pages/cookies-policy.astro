@@ -1,8 +1,20 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
+import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+
+const lang = pickLang(Astro.currentLocale, Astro.url);
+const t = useTranslations(lang);
+const lp = (p: string) => localizeHref(p, lang);
+const crumbs = [
+  { label: t("nav.home"), href: lp("/") },
+  { label: t("nav.pages"), href: null },
+  { label: t("nav.cookiesPolicy"), href: null },
+];
 ---
 
 <Layout title="Cookies Policy – OrthoHouse Cyprus">
+  <Breadcrumb crumbs={crumbs} />
   <div class="about-wrapper">
 
     <!-- Hero banner -->

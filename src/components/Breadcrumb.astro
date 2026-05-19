@@ -1,0 +1,71 @@
+---
+export interface Crumb {
+  label: string;
+  href: string | null; // null = current page (no link)
+}
+interface Props {
+  crumbs: Crumb[];
+}
+const { crumbs } = Astro.props as Props;
+---
+
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <ol>
+    {crumbs.map((crumb, i) => (
+      <li>
+        {crumb.href ? (
+          <a href={crumb.href}>{crumb.label}</a>
+        ) : (
+          <span class="breadcrumb-current">{crumb.label}</span>
+        )}
+        {i < crumbs.length - 1 && (
+          <svg class="breadcrumb-sep" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="12" height="12" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          </svg>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  .breadcrumb {
+    background: #f8fafc;
+    padding: 0.6rem 1.5rem;
+    margin: -1.5rem -1.5rem 1.5rem;
+    border-bottom: 1px solid #e8edf3;
+  }
+  .breadcrumb ol {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0 auto;
+    padding: 0;
+    flex-wrap: wrap;
+    max-width: 1200px;
+  }
+  .breadcrumb li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+    color: #888;
+  }
+  .breadcrumb a {
+    color: #1e3a5f;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .breadcrumb a:hover { color: #2563eb; }
+  .breadcrumb-current {
+    color: #555;
+    font-weight: 600;
+    max-width: 38ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .breadcrumb-sep { color: #bbb; flex-shrink: 0; }
+</style>

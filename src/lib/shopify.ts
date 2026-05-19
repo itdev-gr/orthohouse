@@ -140,7 +140,7 @@ export const PRODUCT_QUERY = `query ProductByHandle($handle: String!) {
         compareAtPrice { amount currencyCode }
       }
     }
-    collections(first: 1) {
+    collections(first: 10) {
       nodes { handle title }
     }
   }
@@ -173,6 +173,7 @@ const COLLECTION_PRODUCTS_PAGINATED = `query CollectionProducts($handle: String!
         title
         handle
         description
+        availableForSale
         priceRange {
           minVariantPrice { amount currencyCode }
         }
@@ -198,6 +199,7 @@ export const COLLECTION_PRODUCTS_QUERY = `query CollectionProducts($handle: Stri
         title
         handle
         description
+        availableForSale
         priceRange {
           minVariantPrice { amount currencyCode }
         }

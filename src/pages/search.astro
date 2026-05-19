@@ -1,15 +1,22 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Breadcrumb from "../components/Breadcrumb.astro";
 import { getAllProducts } from "../lib/shopify";
-import { pickLang, localizeHref } from "../i18n/utils";
+import { pickLang, useTranslations, localizeHref } from "../i18n/utils";
 
 const products = await getAllProducts();
 const lang = pickLang(Astro.currentLocale, Astro.url);
 const isEl = lang === "el";
 const lp = (p: string) => localizeHref(p, lang);
+const t = useTranslations(lang);
+const crumbs = [
+  { label: t("nav.home"), href: lp("/") },
+  { label: t("search.page.title"), href: null },
+];
 ---
 
 <Layout title={isEl ? "Αναζήτηση – OrthoHouse Cyprus" : "Search – OrthoHouse Cyprus"}>
+  <Breadcrumb crumbs={crumbs} />
   <a href={lp("/")} class="back">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />

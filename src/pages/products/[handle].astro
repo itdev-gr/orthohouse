@@ -8,6 +8,9 @@ import {
 } from "../../lib/shopify";
 import { NAV_CATEGORIES, getCategoryLabel, getSubLabel } from "../../lib/menuConfig";
 import { getProductExtendedData } from "../../lib/productData";
+import { isQuotationOnly } from "../../lib/quotationCollections";
+import RecentlyViewed from "../../components/RecentlyViewed.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
 import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
 
 export async function getStaticPaths() {
@@ -49,6 +52,10 @@ const isAvailable = firstVariant?.availableForSale ?? false;
 // Related products
 const collectionHandle = (product as any).collections?.nodes[0]?.handle ?? null;
 const collectionTitle = (product as any).collections?.nodes[0]?.title ?? t("collection.relatedProducts");
+
+// Quote-only collections (Sensory Rooms, Stair Lifts) — hide price, show CTA
+const allCollectionHandles: string[] = ((product as any).collections?.nodes ?? []).map((n: any) => n.handle);
+const quoteOnly = isQuotationOnly(allCollectionHandles);
 const { products: relatedRaw } = collectionHandle
   ? await getCollectionWithProducts(collectionHandle)
   : { products: [] };
@@ -59,26 +66,34 @@ const relatedProducts = (relatedRaw as any[])
 // Extended product data
 const extData = getProductExtendedData(handle!);
 
-// Breadcrumb resolution
+// Breadcrumb resolution — iterate ALL collection handles on the product
+// and pick the best NAV match (prefer subcategory match — adds two levels).
 function buildBreadcrumbs() {
   const crumbs: { label: string; href: string | null }[] = [
     { label: t("nav.home"), href: lp("/") },
-    { label: lang === "el" ? "Προϊόντα" : "Products", href: lp("/") },
+    { label: lang === "el" ? "Προϊόντα" : "Products", href: lp("/#cat-section") },
   ];
 
   if (extData.breadcrumbs) {
     extData.breadcrumbs.forEach((b) => crumbs.push({ label: b.label, href: b.href }));
-  } else if (collectionHandle) {
+  } else {
+    const productCollections: string[] = allCollectionHandles;
+
+    let bestParent: typeof NAV_CATEGORIES[number] | null = null;
+    let bestChild: typeof NAV_CATEGORIES[number]["children"][number] | null = null;
+
     for (const cat of NAV_CATEGORIES) {
-      const child = cat.children.find((c) => c.handle === collectionHandle);
-      if (child) {
-        crumbs.push({ label: getCategoryLabel(cat, lang), href: lp(`/collections/${cat.handle}`) });
-        crumbs.push({ label: getSubLabel(child, lang), href: lp(`/collections/${child.handle}`) });
-        break;
-      }
-      if (cat.handle === collectionHandle) {
-        crumbs.push({ label: getCategoryLabel(cat, lang), href: lp(`/collections/${cat.handle}`) });
-        break;
+      const child = cat.children.find((c) => productCollections.includes(c.handle));
+      if (child) { bestParent = cat; bestChild = child; break; }
+    }
+    if (!bestParent) {
+      bestParent = NAV_CATEGORIES.find((cat) => productCollections.includes(cat.handle)) ?? null;
+    }
+
+    if (bestParent) {
+      crumbs.push({ label: getCategoryLabel(bestParent, lang), href: lp(`/collections/${bestParent.handle}`) });
+      if (bestChild) {
+        crumbs.push({ label: getSubLabel(bestChild, lang), href: lp(`/collections/${bestChild.handle}`) });
       }
     }
   }
@@ -125,24 +140,7 @@ const hasSection3 = tabs.length > 0;
   }}
 >
   <!-- ══════════════ BREADCRUMBS ══════════════ -->
-  <nav class="breadcrumb" aria-label="Breadcrumb">
-    <ol>
-      {breadcrumbs.map((crumb, i) => (
-        <li>
-          {crumb.href ? (
-            <a href={crumb.href}>{crumb.label}</a>
-          ) : (
-            <span class="breadcrumb-current">{crumb.label}</span>
-          )}
-          {i < breadcrumbs.length - 1 && (
-            <svg class="breadcrumb-sep" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="12" height="12">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-            </svg>
-          )}
-        </li>
-      ))}
-    </ol>
-  </nav>
+  <Breadcrumb crumbs={breadcrumbs} />
 
   <!-- ══════════════ SECTION 1: Product Top ══════════════ -->
   <div class="product-top" id="swr-target" data-swr-type="detail">
@@ -150,12 +148,24 @@ const hasSection3 = tabs.length > 0;
     <div class="image-area">
       <div class="main-image-col">
         {isSale && <span class="sale-badge">{lang === "el" ? "Προσφορά" : "Sale"}</span>}
-        <img
-          id="main-image"
-          src={images[0]?.url}
-          alt={images[0]?.altText || product.title}
-          class="main-image"
-        />
+        <button
+          type="button"
+          class="main-image-trigger"
+          id="main-image-trigger"
+          aria-label={lang === "el" ? "Μεγέθυνση εικόνας" : "Zoom image"}
+        >
+          <img
+            id="main-image"
+            src={images[0]?.url}
+            alt={images[0]?.altText || product.title}
+            class="main-image"
+          />
+          <span class="zoom-hint" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" width="22" height="22">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m-3-3h6"/>
+            </svg>
+          </span>
+        </button>
       </div>
 
       {hasMultipleImages && (
@@ -215,9 +225,11 @@ const hasSection3 = tabs.length > 0;
         )}
       </div>
 
-      <!-- Price -->
+      <!-- Price (or quote CTA for sensory-rooms / stair-lifts) -->
       <div class="price-block">
-        {isSale ? (
+        {quoteOnly ? (
+          <p class="price-quote">{t("product.contactForQuote")}</p>
+        ) : isSale ? (
           <>
             <span class="price-compare">{currencyCode} {compareAt.toFixed(2)}</span>
             <span class="price-sale" id="variant-price">{currencyCode} {price.toFixed(2)}</span>
@@ -278,15 +290,21 @@ const hasSection3 = tabs.length > 0;
           <button type="button" class="qty-btn" id="qty-plus" aria-label={lang === "el" ? "Αύξηση ποσότητας" : "Increase quantity"}>+</button>
         </div>
 
-        <button
-          type="button"
-          class="add-to-cart-btn"
-          id="add-to-cart"
-          data-variant-id={firstVariant?.id}
-          disabled={!isAvailable}
-        >
-          {isAvailable ? (lang === "el" ? "Προσθήκη στο Καλάθι" : "Add to Cart") : (lang === "el" ? "Εξαντλημένο" : "Sold Out")}
-        </button>
+        {quoteOnly ? (
+          <a class="add-to-cart-btn quote-btn" href={lp("/pages/find-us")}>
+            {t("product.requestQuote")}
+          </a>
+        ) : (
+          <button
+            type="button"
+            class="add-to-cart-btn"
+            id="add-to-cart"
+            data-variant-id={firstVariant?.id}
+            disabled={!isAvailable}
+          >
+            {isAvailable ? (lang === "el" ? "Προσθήκη στο Καλάθι" : "Add to Cart") : (lang === "el" ? "Εξαντλημένο" : "Sold Out")}
+          </button>
+        )}
       </div>
     </div>
   </div>
@@ -509,7 +527,7 @@ const hasSection3 = tabs.length > 0;
   {relatedProducts.length > 0 && (
     <section class="related">
       <div class="related-header">
-        <h2 class="related-title">{lang === "el" ? "Περισσότερα από" : "More from"} {collectionTitle}</h2>
+        <h2 class="related-title">{t("product.similarProducts")}</h2>
         <div class="related-arrows">
           <button type="button" class="rel-arrow" id="rel-prev" aria-label={lang === "el" ? "Προηγούμενα προϊόντα" : "Previous products"}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
@@ -539,6 +557,9 @@ const hasSection3 = tabs.length > 0;
               </div>
               <div class="rel-info">
                 <h3 class="rel-card-title">{p.title}</h3>
+                <span class={"stock-pill " + (p.availableForSale ? "in" : "out")}>
+                  {p.availableForSale ? t("card.inStock") : t("card.outOfStock")}
+                </span>
                 <p class="rel-price">
                   {p.priceRange.minVariantPrice.currencyCode}{" "}
                   {parseFloat(p.priceRange.minVariantPrice.amount).toFixed(2)}
@@ -556,50 +577,51 @@ const hasSection3 = tabs.length > 0;
       </div>
     </section>
   )}
+
+  <!-- Recently Viewed Products (per Remarks §11) -->
+  <div
+    id="product-meta"
+    hidden
+    data-handle={product.handle}
+    data-title={product.title}
+    data-image={images[0]?.url ?? ""}
+    data-price={String(price)}
+    data-currency={currencyCode}
+  ></div>
+  <RecentlyViewed />
+
+  <!-- Image Lightbox (per Remarks §15) -->
+  <dialog id="image-lightbox" class="image-lightbox" aria-label={lang === "el" ? "Μεγέθυνση εικόνας" : "Image zoom"}>
+    <button type="button" class="lightbox-close" id="lightbox-close" aria-label={lang === "el" ? "Κλείσιμο" : "Close"}>×</button>
+    <img id="lightbox-img" src="" alt="" />
+    <div class="lightbox-nav">
+      <button type="button" id="lightbox-prev" class="lightbox-arrow" aria-label={lang === "el" ? "Προηγούμενο" : "Previous"}>‹</button>
+      <button type="button" id="lightbox-next" class="lightbox-arrow" aria-label={lang === "el" ? "Επόμενο" : "Next"}>›</button>
+    </div>
+  </dialog>
+
+  <!-- Add-to-Cart confirmation modal (per Remarks §16 / §17) -->
+  {!quoteOnly && (
+    <dialog id="add-confirm" class="add-confirm" aria-label={t("cart.itemAdded")}>
+      <div class="add-confirm__inner">
+        <div class="add-confirm__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="32" height="32">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+        </div>
+        <p class="add-confirm__title">{t("cart.itemAdded")}</p>
+        <p class="add-confirm__product">{product.title}</p>
+        <div class="add-confirm__actions">
+          <button type="button" class="add-confirm__btn add-confirm__btn--ghost" id="add-confirm-continue">{t("cart.continueShopping")}</button>
+          <a class="add-confirm__btn add-confirm__btn--primary" href={lp("/cart")}>{t("cart.viewCart")}</a>
+        </div>
+      </div>
+    </dialog>
+  )}
 </Layout>
 
 <style>
-  /* ══════════════ BREADCRUMBS ══════════════ */
-  .breadcrumb {
-    background: #f8fafc;
-    padding: 0.6rem 0;
-    margin: -2rem -2rem 1.5rem -2rem;
-    padding-left: 2rem;
-    padding-right: 2rem;
-    border-bottom: 1px solid #e8edf3;
-  }
-  .breadcrumb ol {
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin: 0;
-    padding: 0;
-    flex-wrap: wrap;
-  }
-  .breadcrumb li {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.78rem;
-    color: #888;
-  }
-  .breadcrumb a {
-    color: #1e3a5f;
-    text-decoration: none;
-    transition: color 0.15s;
-  }
-  .breadcrumb a:hover { color: #2563eb; }
-  .breadcrumb-current {
-    color: #555;
-    font-weight: 600;
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: inline-block;
-  }
-  .breadcrumb-sep { color: #bbb; flex-shrink: 0; }
+  /* Breadcrumb styles now live in src/components/Breadcrumb.astro */
 
   /* ══════════════ SECTION 1: Product Top ══════════════ */
   .product-top {
@@ -758,6 +780,174 @@ const hasSection3 = tabs.length > 0;
   .price-regular { font-size: 1.5rem; font-weight: 700; color: #1e3a5f; }
   .price-compare { font-size: 1.1rem; color: #9ca3af; text-decoration: line-through; }
   .price-sale { font-size: 1.5rem; font-weight: 700; color: #dc2626; }
+  .price-quote {
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    background: #f1f5fb;
+    border-left: 3px solid #2563eb;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    border-radius: 6px;
+    flex-basis: 100%;
+  }
+  .quote-btn {
+    text-align: center;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stock-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    margin-bottom: 0.35rem;
+    align-self: flex-start;
+  }
+  .stock-pill.in  { background: #ecfdf5; color: #047857; }
+  .stock-pill.out { background: #fef2f2; color: #b91c1c; }
+
+  /* Image lightbox trigger (per Remarks §15) */
+  .main-image-trigger {
+    position: relative;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-in;
+    width: 100%;
+  }
+  .main-image-trigger:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+  .zoom-hint {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    background: rgba(15,23,42,.7);
+    color: #fff;
+    padding: 0.4rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .image-lightbox {
+    border: none;
+    background: rgba(15, 23, 42, 0.92);
+    padding: 0;
+    max-width: 100vw;
+    max-height: 100vh;
+    width: 100vw;
+    height: 100vh;
+    inset: 0;
+    margin: 0;
+  }
+  .image-lightbox::backdrop { background: rgba(15,23,42,.92); }
+  .image-lightbox img {
+    display: block;
+    margin: auto;
+    max-width: 92vw;
+    max-height: 88vh;
+    object-fit: contain;
+    cursor: zoom-out;
+  }
+  .lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    color: #fff;
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,.28); }
+  .lightbox-nav {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+    pointer-events: none;
+  }
+  .lightbox-arrow {
+    pointer-events: auto;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .lightbox-arrow:hover { background: rgba(255,255,255,.28); }
+
+  /* Add-to-Cart confirmation modal (per Remarks §16 / §17) */
+  .add-confirm {
+    border: none;
+    border-radius: 14px;
+    padding: 0;
+    width: min(420px, calc(100% - 2rem));
+    box-shadow: 0 18px 60px rgba(15, 23, 42, 0.28);
+  }
+  .add-confirm::backdrop { background: rgba(15,23,42,.55); }
+  .add-confirm__inner { padding: 1.5rem 1.5rem 1.25rem; text-align: center; }
+  .add-confirm__icon {
+    width: 56px; height: 56px;
+    margin: 0 auto 0.75rem;
+    border-radius: 50%;
+    background: #ecfdf5;
+    color: #047857;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .add-confirm__title { font-weight: 700; font-size: 1.05rem; margin: 0 0 0.25rem; color: #1e3a5f; }
+  .add-confirm__product { font-size: 0.9rem; color: #555; margin: 0 0 1.25rem; }
+  .add-confirm__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .add-confirm__btn {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .add-confirm__btn--ghost {
+    background: #fff;
+    border-color: #d1d5db;
+    color: #1e3a5f;
+  }
+  .add-confirm__btn--ghost:hover { background: #f3f4f6; }
+  .add-confirm__btn--primary {
+    background: #2563eb;
+    color: #fff;
+  }
+  .add-confirm__btn--primary:hover { background: #1d4ed8; }
 
   /* Short description */
   .short-desc-wrap {
@@ -1402,12 +1592,6 @@ const hasSection3 = tabs.length > 0;
 
   /* ══════════════ MOBILE ══════════════ */
   @media (max-width: 768px) {
-    .breadcrumb {
-      margin: -1rem -1rem 1rem -1rem;
-      padding-left: 1rem;
-      padding-right: 1rem;
-    }
-
     .product-top {
       grid-template-columns: 1fr;
       gap: 1.25rem;
@@ -1673,7 +1857,10 @@ const hasSection3 = tabs.length > 0;
     });
   }
 
-  /* ── Add to cart ── */
+  /* ── Add to cart (with confirmation modal, per Remarks §16 / §17) ── */
+  var confirmDlg = document.getElementById("add-confirm");
+  var confirmContinue = document.getElementById("add-confirm-continue");
+
   if (addBtn) {
     addBtn.addEventListener("click", function () {
       if (addBtn.disabled || addBtn.classList.contains("loading")) return;
@@ -1687,11 +1874,12 @@ const hasSection3 = tabs.length > 0;
 
       Cart.addToCart(variantId, currentQty)
         .then(function () {
-          addBtn.textContent = "Added!";
-          setTimeout(function () {
-            addBtn.textContent = origText;
-            addBtn.classList.remove("loading");
-          }, 1200);
+          addBtn.textContent = origText;
+          addBtn.classList.remove("loading");
+          if (confirmDlg) {
+            if (typeof confirmDlg.showModal === "function") confirmDlg.showModal();
+            else confirmDlg.setAttribute("open", "");
+          }
         })
         .catch(function (err) {
           console.error("Add to cart failed:", err);
@@ -1701,6 +1889,19 @@ const hasSection3 = tabs.length > 0;
             addBtn.textContent = origText;
           }, 2000);
         });
+    });
+  }
+
+  if (confirmContinue && confirmDlg) {
+    confirmContinue.addEventListener("click", function () {
+      if (typeof confirmDlg.close === "function") confirmDlg.close();
+      else confirmDlg.removeAttribute("open");
+    });
+    confirmDlg.addEventListener("click", function (e) {
+      if (e.target === confirmDlg) {
+        if (typeof confirmDlg.close === "function") confirmDlg.close();
+        else confirmDlg.removeAttribute("open");
+      }
     });
   }
 
@@ -1723,5 +1924,75 @@ const hasSection3 = tabs.length > 0;
       relTrack.style.transform = "translateX(-" + relOffset + "px)";
     });
   }
+
+  /* ── Image lightbox (per Remarks §15) ── */
+  (function initLightbox() {
+    var trigger = document.getElementById("main-image-trigger");
+    var lightbox = document.getElementById("image-lightbox");
+    var lbImg = document.getElementById("lightbox-img");
+    var lbClose = document.getElementById("lightbox-close");
+    var lbPrev = document.getElementById("lightbox-prev");
+    var lbNext = document.getElementById("lightbox-next");
+    var mainImgEl = document.getElementById("main-image");
+    if (!trigger || !lightbox || !lbImg || !mainImgEl) return;
+
+    var thumbBtns = Array.prototype.slice.call(document.querySelectorAll(".thumb-btn"));
+    var srcs = thumbBtns.length
+      ? thumbBtns.map(function (b) { return b.dataset.src; })
+      : [mainImgEl.src];
+
+    var currentIdx = 0;
+
+    function open(idx) {
+      if (srcs.length === 0) return;
+      currentIdx = ((idx % srcs.length) + srcs.length) % srcs.length;
+      lbImg.src = srcs[currentIdx];
+      lbImg.alt = mainImgEl.alt || "";
+      if (typeof lightbox.showModal === "function") lightbox.showModal();
+      else lightbox.setAttribute("open", "");
+    }
+    function close() {
+      if (typeof lightbox.close === "function") lightbox.close();
+      else lightbox.removeAttribute("open");
+    }
+
+    trigger.addEventListener("click", function () {
+      var activeIdx = thumbBtns.findIndex(function (b) { return b.classList.contains("active"); });
+      open(activeIdx >= 0 ? activeIdx : 0);
+    });
+    lbClose.addEventListener("click", close);
+    lightbox.addEventListener("click", function (e) {
+      if (e.target === lightbox || e.target === lbImg) close();
+    });
+    lbPrev && lbPrev.addEventListener("click", function (e) { e.stopPropagation(); open(currentIdx - 1); });
+    lbNext && lbNext.addEventListener("click", function (e) { e.stopPropagation(); open(currentIdx + 1); });
+    document.addEventListener("keydown", function (e) {
+      if (!lightbox.open) return;
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowLeft" && lbPrev) lbPrev.click();
+      else if (e.key === "ArrowRight" && lbNext) lbNext.click();
+    });
+  })();
+
+  /* ── Record this product in Recently Viewed (per Remarks §11) ── */
+  try {
+    var rvMetaEl = document.getElementById("product-meta");
+    if (rvMetaEl && rvMetaEl.dataset && rvMetaEl.dataset.handle) {
+      var RV_KEY = "ohc:recently-viewed";
+      var rvExisting = [];
+      try { rvExisting = JSON.parse(localStorage.getItem(RV_KEY) || "[]"); } catch (e) {}
+      var rvEntry = {
+        handle: rvMetaEl.dataset.handle,
+        title: rvMetaEl.dataset.title || "",
+        image: rvMetaEl.dataset.image || "",
+        price: parseFloat(rvMetaEl.dataset.price || "0"),
+        currency: rvMetaEl.dataset.currency || "EUR",
+        viewedAt: Date.now()
+      };
+      var rvDedup = rvExisting.filter(function (e) { return e && e.handle !== rvEntry.handle; });
+      rvDedup.unshift(rvEntry);
+      localStorage.setItem(RV_KEY, JSON.stringify(rvDedup.slice(0, 12)));
+    }
+  } catch (e) {}
 })();
 </script>
