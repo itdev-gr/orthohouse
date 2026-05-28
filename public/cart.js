@@ -78,6 +78,7 @@
       },
       body: JSON.stringify({ query: query, variables: variables }),
     }).then(function (r) {
+      if (!r.ok) throw new Error("Shopify HTTP " + r.status);
       return r.json();
     });
   }
@@ -144,13 +145,21 @@
   function ensureCartId() {
     var id = localStorage.getItem(STORAGE_KEY);
     if (id) {
-      return loadCart(id).then(function (cart) {
-        if (cart) {
-          setCart(cart);
-          return id;
-        }
-        return createFresh();
-      });
+      return loadCart(id)
+        .then(function (cart) {
+          if (cart) {
+            setCart(cart);
+            return id;
+          }
+          // Cart not found server-side — purge stale id and create a new cart.
+          localStorage.removeItem(STORAGE_KEY);
+          return createFresh();
+        })
+        .catch(function (err) {
+          console.warn("loadCart failed, creating fresh cart:", err);
+          localStorage.removeItem(STORAGE_KEY);
+          return createFresh();
+        });
     }
     return createFresh();
   }
@@ -180,6 +189,7 @@
         var payload = res.data && res.data.cartLinesAdd;
         var ue = payload ? payload.userErrors || [] : [];
         if (ue.length) throw new Error(ue.map(function (e) { return e.message; }).join(", "));
+        if (!payload || !payload.cart) throw new Error("cartLinesAdd returned no cart");
         setCart(payload.cart);
         return payload.cart;
       });
