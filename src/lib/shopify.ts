@@ -18,6 +18,7 @@ export const shopifyConfig = {
   store: import.meta.env.SHOPIFY_STORE,
   token: import.meta.env.STOREFRONT_TOKEN,
   version: import.meta.env.SHOPIFY_API_VERSION,
+  primaryDomain: import.meta.env.SHOPIFY_PRIMARY_DOMAIN,
 };
 
 // ---------------------------------------------------------------------------
