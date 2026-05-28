@@ -56,8 +56,21 @@ async function cached<T>(
     }
   }
 
-  const { data } = await client.request(query, { variables });
-  writeFileSync(file, JSON.stringify({ timestamp: Date.now(), data }));
+  const { data, errors } = await client.request(query, { variables });
+  if (errors?.graphQLErrors?.length || errors?.networkStatusCode) {
+    throw new Error(
+      "Storefront API error: " +
+        JSON.stringify(errors.graphQLErrors ?? errors.message ?? errors),
+    );
+  }
+  if (data === undefined || data === null) {
+    throw new Error("Storefront API returned empty data");
+  }
+  // Atomic write: tmp file then rename (so a killed process never leaves a corrupt cache file).
+  const tmp = file + ".tmp";
+  writeFileSync(tmp, JSON.stringify({ timestamp: Date.now(), data }));
+  const { renameSync } = await import("node:fs");
+  renameSync(tmp, file);
   return data as T;
 }
 
@@ -108,12 +121,16 @@ export const PRODUCTS_QUERY = `query Products($first: Int!) {
       title
       handle
       description
+      availableForSale
       priceRange {
         minVariantPrice { amount currencyCode }
       }
       featuredImage {
         url
         altText
+      }
+      variants(first: 1) {
+        nodes { availableForSale }
       }
     }
   }
@@ -274,12 +291,14 @@ export async function getCollectionWithProducts(handle: string) {
   // Paginate remaining pages
   let pageInfo = firstPage.pageInfo;
   while (pageInfo.hasNextPage) {
+    if (!pageInfo.endCursor) break; // guard infinite loop on null cursor
     const pageData = await cached<any>(COLLECTION_PRODUCTS_PAGINATED, {
       handle,
       first: 50,
       after: pageInfo.endCursor,
     });
-    const page = pageData.collection.products;
+    const page = pageData?.collection?.products;
+    if (!page) break;
     products.push(...page.nodes);
     pageInfo = page.pageInfo;
   }
