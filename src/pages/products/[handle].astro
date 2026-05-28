@@ -18,6 +18,15 @@ export async function getStaticPaths() {
   return products.map((p: any) => ({ params: { handle: p.handle } }));
 }
 
+interface ShopifyCollectionRef { handle: string; title: string }
+interface ShopifyProduct {
+  collections?: { nodes: ShopifyCollectionRef[] };
+  variants: { nodes: any[] };
+  images: { nodes: any[] };
+  title: string;
+  descriptionHtml?: string;
+}
+
 const lang = pickLang(Astro.currentLocale, Astro.url);
 const t = useTranslations(lang);
 const lp = (p: string) => localizeHref(p, lang);
@@ -26,6 +35,7 @@ const { handle } = Astro.params;
 const product = await getProductByHandle(handle!);
 
 if (!product) return Astro.redirect("/404");
+if (!product.variants?.nodes?.length) return Astro.redirect("/404");
 
 // Strip Shopify-injected script tags
 const cleanDescription =
@@ -48,13 +58,15 @@ const currencyCode = firstVariant?.price?.currencyCode ?? "EUR";
 // SKU & availability
 const sku = firstVariant?.sku ?? "";
 const isAvailable = firstVariant?.availableForSale ?? false;
+const labelAdd = lang === "el" ? "Προσθήκη στο Καλάθι" : "Add to Cart";
+const labelSold = lang === "el" ? "Εξαντλήθηκε" : "Sold Out";
 
 // Related products
-const collectionHandle = (product as any).collections?.nodes[0]?.handle ?? null;
-const collectionTitle = (product as any).collections?.nodes[0]?.title ?? t("collection.relatedProducts");
+const collectionHandle = (product as ShopifyProduct).collections?.nodes[0]?.handle ?? null;
+const collectionTitle = (product as ShopifyProduct).collections?.nodes[0]?.title ?? t("collection.relatedProducts");
 
 // Quote-only collections (Sensory Rooms, Stair Lifts) — hide price, show CTA
-const allCollectionHandles: string[] = ((product as any).collections?.nodes ?? []).map((n: any) => n.handle);
+const allCollectionHandles: string[] = ((product as ShopifyProduct).collections?.nodes ?? []).map((n: ShopifyCollectionRef) => n.handle);
 const quoteOnly = isQuotationOnly(allCollectionHandles);
 const { products: relatedRaw } = collectionHandle
   ? await getCollectionWithProducts(collectionHandle)
@@ -159,6 +171,8 @@ const hasSection3 = tabs.length > 0;
             src={images[0]?.url}
             alt={images[0]?.altText || product.title}
             class="main-image"
+            width="600"
+            height="600"
           />
           <span class="zoom-hint" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" width="22" height="22">
@@ -301,8 +315,10 @@ const hasSection3 = tabs.length > 0;
             id="add-to-cart"
             data-variant-id={firstVariant?.id}
             disabled={!isAvailable}
+            data-label-add={labelAdd}
+            data-label-sold={labelSold}
           >
-            {isAvailable ? (lang === "el" ? "Προσθήκη στο Καλάθι" : "Add to Cart") : (lang === "el" ? "Εξαντλημένο" : "Sold Out")}
+            {isAvailable ? labelAdd : labelSold}
           </button>
         )}
       </div>
@@ -1665,19 +1681,22 @@ const hasSection3 = tabs.length > 0;
     html = html.replace(/<\/p>/gi, "\n").replace(/<p[^>]*>/gi, "");
     html = html.replace(/<br\s*\/?>/gi, "\n");
     var lines = html.split("\n");
-    var out = "";
+    var frag = document.createDocumentFragment();
     lines.forEach(function (line) {
       var t = line.trim();
       if (!t || t === "&nbsp;") {
-        out += '<div class="desc-spacer"></div>';
+        var sp = document.createElement("div");
+        sp.className = "desc-spacer";
+        frag.appendChild(sp);
         return;
       }
       var isHeading = /[A-Z]/.test(t) && !/[a-z]/.test(t);
-      out += isHeading
-        ? '<div class="desc-heading">' + t + "</div>"
-        : '<div class="desc-line">' + t + "</div>";
+      var div = document.createElement("div");
+      div.className = isHeading ? "desc-heading" : "desc-line";
+      div.textContent = t;
+      frag.appendChild(div);
     });
-    desc.innerHTML = out;
+    desc.replaceChildren(frag);
   })();
 
   /* ── Section 3 description Read More toggle ── */
@@ -1847,7 +1866,7 @@ const hasSection3 = tabs.length > 0;
 
       addBtn.dataset.variantId = selectEl.value;
       addBtn.disabled = !avail;
-      addBtn.textContent = avail ? "Add to Cart" : "Sold Out";
+      addBtn.textContent = avail ? addBtn.dataset.labelAdd : addBtn.dataset.labelSold;
 
       if (priceEl) {
         var newPrice = parseFloat(opt.dataset.price).toFixed(2);
@@ -1968,6 +1987,8 @@ const hasSection3 = tabs.length > 0;
     lbNext && lbNext.addEventListener("click", function (e) { e.stopPropagation(); open(currentIdx + 1); });
     document.addEventListener("keydown", function (e) {
       if (!lightbox.open) return;
+      // Only act if focus is inside the lightbox dialog (not a stacked modal above it).
+      if (!lightbox.contains(document.activeElement)) return;
       if (e.key === "Escape") close();
       else if (e.key === "ArrowLeft" && lbPrev) lbPrev.click();
       else if (e.key === "ArrowRight" && lbNext) lbNext.click();
