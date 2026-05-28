@@ -176,6 +176,12 @@ const crumbs = [
   var lang = document.getElementById("cart-container").dataset.lang;
   var removeLabel = lang === "el" ? "Αφαίρεση" : "Remove";
 
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
   function renderCart(cart) {
     loadingEl.style.display = "none";
 
@@ -195,14 +201,14 @@ const crumbs = [
       var merch = node.merchandise;
       var price = parseFloat(merch.price.amount).toFixed(2);
       var imgHtml = merch.image
-        ? '<img class="cart-line-img" src="' + merch.image.url + '" alt="' + (merch.image.altText || merch.product.title).replace(/"/g, "&quot;") + '">'
+        ? '<img class="cart-line-img" src="' + merch.image.url + '" alt="' + escapeHtml(merch.image.altText || merch.product.title) + '">'
         : "";
 
       html += '<div class="cart-line" data-line-id="' + node.id + '">'
         + imgHtml
         + '<div class="cart-line-info">'
-        + '<div class="cart-line-title">' + merch.product.title + '</div>'
-        + '<div class="cart-line-variant">' + merch.title + '</div>'
+        + '<div class="cart-line-title">' + escapeHtml(merch.product.title) + '</div>'
+        + '<div class="cart-line-variant">' + escapeHtml(merch.title) + '</div>'
         + '<div class="cart-line-price">' + merch.price.currencyCode + ' ' + price + '</div>'
         + '<div class="qty-controls">'
         + '<button type="button" class="qty-btn" data-action="dec" data-line-id="' + node.id + '" data-qty="' + node.quantity + '">&minus;</button>'
@@ -299,10 +305,12 @@ const crumbs = [
   });
 
   // Checkout
-  checkoutBtn.addEventListener("click", function () {
-    var url = Cart.getCheckoutUrl();
-    if (url) window.location.href = url;
-  });
+  if (checkoutBtn) {
+    checkoutBtn.addEventListener("click", function () {
+      var url = Cart.getCheckoutUrl();
+      if (url) window.location.href = url;
+    });
+  }
 
   // If cart.js already loaded and resolved, render immediately; otherwise wait for event
   tryRender();
