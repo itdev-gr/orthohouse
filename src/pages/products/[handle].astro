@@ -27,7 +27,7 @@ const product = await getProductByHandle(handle!);
 
 if (!product) return Astro.redirect("/404");
 
-// Strip Shopify-injected <script> tags
+// Strip Shopify-injected script tags
 const cleanDescription =
   product.descriptionHtml?.replace(
     /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
