@@ -67,10 +67,16 @@ const crumbs = [
 </Layout>
 
 <!-- All product data embedded at build time (filtered client-side) -->
-<script id="all-products" type="application/json" set:html={JSON.stringify(products)} />
+<script id="all-products" type="application/json" set:html={JSON.stringify(products).replace(/<\//g, "<\\/")} />
 
 <script is:inline>
 (function () {
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
   var q          = new URLSearchParams(window.location.search).get("q") || "";
   var titleEl    = document.getElementById("search-title");
   var grid       = document.getElementById("search-grid");
@@ -329,7 +335,7 @@ const crumbs = [
       "</div>" +
       '<div class="info">' +
       '<h2 class="card-title">' +
-      p.title +
+      escapeHtml(p.title) +
       "</h2>" +
       '<p class="price">' +
       price.currencyCode +
