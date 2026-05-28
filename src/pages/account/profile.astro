@@ -1,115 +1,20 @@
 ---
-import AccountLayout from "../../components/AccountLayout.astro";
-import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+import { shopifyConfig } from "../../lib/shopify";
 
-const lang = pickLang(Astro.currentLocale, Astro.url);
-const t = useTranslations(lang);
-const lp = (p: string) => localizeHref(p, lang);
+const dest = `https://${shopifyConfig.store}/account`;
 ---
-
-<AccountLayout section="profile" pageTitle={t("account.profile.title")}>
-  <h1 class="acc-h1">{t("account.profile.title")}</h1>
-
-  <div id="prof-alert" class="acc-alert" role="status"></div>
-
-  <form id="prof-form" class="acc-form" novalidate>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
-      <div class="acc-field">
-        <label class="acc-label" for="prof-firstName">{t("account.profile.firstName")}</label>
-        <input class="acc-input" id="prof-firstName" name="firstName" type="text" autocomplete="given-name" />
-      </div>
-      <div class="acc-field">
-        <label class="acc-label" for="prof-lastName">{t("account.profile.lastName")}</label>
-        <input class="acc-input" id="prof-lastName" name="lastName" type="text" autocomplete="family-name" />
-      </div>
-    </div>
-    <div class="acc-field">
-      <label class="acc-label" for="prof-email">{t("account.profile.email")}</label>
-      <input class="acc-input" id="prof-email" name="email" type="email" autocomplete="email" />
-    </div>
-    <div class="acc-field">
-      <label class="acc-label" for="prof-phone">{t("account.profile.phone")}</label>
-      <input class="acc-input" id="prof-phone" name="phone" type="tel" autocomplete="tel" />
-    </div>
-    <label class="acc-checkbox-row">
-      <input id="prof-marketing" name="acceptsMarketing" type="checkbox" />
-      {t("account.profile.acceptsMarketing")}
-    </label>
-
-    <h2 class="acc-section-title" style="margin-top:1.25rem;">{t("account.profile.passwordSection")}</h2>
-    <div class="acc-field">
-      <label class="acc-label" for="prof-password">{t("account.profile.newPassword")}</label>
-      <input class="acc-input" id="prof-password" name="password" type="password" autocomplete="new-password" minlength="5" />
-    </div>
-
-    <div>
-      <button class="acc-btn" id="prof-submit" type="submit">{t("account.profile.save")}</button>
-    </div>
-  </form>
-</AccountLayout>
-
-<script is:inline
-  data-saved={t("account.profile.saved")}
-  data-err-generic={t("account.error.generic")}>
-  (function () {
-    var d = document.currentScript.dataset;
-
-    function fill(c) {
-      if (!c) return;
-      var f = document.getElementById("prof-form");
-      f.firstName.value = c.firstName || "";
-      f.lastName.value = c.lastName || "";
-      f.email.value = c.email || "";
-      f.phone.value = c.phone || "";
-      f.acceptsMarketing.checked = !!c.acceptsMarketing;
-    }
-    function ready(fn) {
-      if (document.readyState !== "loading") fn();
-      else document.addEventListener("DOMContentLoaded", fn);
-    }
-    ready(function () {
-      if (window.__customer) fill(window.__customer);
-      document.addEventListener("customer:changed", function (e) { fill(e.detail); });
-      if (window.Customer) window.Customer.refresh();
-
-      var form = document.getElementById("prof-form");
-      var alertEl = document.getElementById("prof-alert");
-      var submit = document.getElementById("prof-submit");
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        alertEl.classList.remove("show", "acc-alert-error", "acc-alert-success");
-        alertEl.textContent = "";
-        if (!window.Customer) return;
-        var input = {
-          firstName: form.firstName.value.trim(),
-          lastName: form.lastName.value.trim(),
-          email: form.email.value.trim(),
-          phone: form.phone.value.trim(),
-          acceptsMarketing: !!form.acceptsMarketing.checked,
-        };
-        // Drop empty phone — Shopify rejects "" for optional field
-        if (!input.phone) delete input.phone;
-        var pw = form.password.value;
-        if (pw) input.password = pw;
-        submit.disabled = true;
-        var orig = submit.textContent;
-        submit.textContent = "…";
-        window.Customer.updateProfile(input)
-          .then(function () {
-            alertEl.classList.add("show", "acc-alert-success");
-            alertEl.textContent = d.saved;
-            form.password.value = "";
-          })
-          .catch(function (err) {
-            console.error("Profile update failed:", err);
-            alertEl.classList.add("show", "acc-alert-error");
-            alertEl.textContent = (err && err.message) || d.errGeneric;
-          })
-          .finally(function () {
-            submit.disabled = false;
-            submit.textContent = orig;
-          });
-      });
-    });
-  })();
-</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content={`0;url=${dest}`} />
+    <link rel="canonical" href={dest} />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script is:inline set:html={`window.location.replace(${JSON.stringify(dest)});`}></script>
+    <noscript>
+      <p>Redirecting to <a href={dest}>{dest}</a>…</p>
+    </noscript>
+  </body>
+</html>

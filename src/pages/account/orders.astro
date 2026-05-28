@@ -1,127 +1,20 @@
 ---
-import AccountLayout from "../../components/AccountLayout.astro";
-import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+import { shopifyConfig } from "../../lib/shopify";
 
-const lang = pickLang(Astro.currentLocale, Astro.url);
-const t = useTranslations(lang);
-const lp = (p: string) => localizeHref(p, lang);
+const dest = `https://${shopifyConfig.store}/account`;
 ---
-
-<AccountLayout section="orders" pageTitle={t("account.orders.title")}>
-  <h1 class="acc-h1">{t("account.orders.title")}</h1>
-  <div id="orders-list">
-    <p class="acc-muted">…</p>
-  </div>
-</AccountLayout>
-
-<script is:inline
-  data-empty={t("account.orders.empty")}
-  data-start-shopping={t("account.startShopping")}
-  data-shop-href={lp("/")}
-  data-order-num={t("account.orders.orderNumber")}
-  data-placed={t("account.orders.placedOn")}
-  data-total={t("account.orders.total")}
-  data-status={t("account.orders.status")}
-  data-view-status={t("account.orders.viewStatus")}
-  data-toggle={t("account.orders.toggle")}
-  data-ship-to={t("account.orders.shipTo")}
-  data-status-labels={JSON.stringify({
-    PAID: t("account.orders.financialStatus.PAID"),
-    PENDING: t("account.orders.financialStatus.PENDING"),
-    REFUNDED: t("account.orders.financialStatus.REFUNDED"),
-    PARTIALLY_PAID: t("account.orders.financialStatus.PARTIALLY_PAID"),
-    PARTIALLY_REFUNDED: t("account.orders.financialStatus.PARTIALLY_REFUNDED"),
-    VOIDED: t("account.orders.financialStatus.VOIDED"),
-    AUTHORIZED: t("account.orders.financialStatus.AUTHORIZED"),
-    FULFILLED: t("account.orders.fulfillmentStatus.FULFILLED"),
-    PARTIALLY_FULFILLED: t("account.orders.fulfillmentStatus.PARTIALLY_FULFILLED"),
-    UNFULFILLED: t("account.orders.fulfillmentStatus.UNFULFILLED"),
-    RESTOCKED: t("account.orders.fulfillmentStatus.RESTOCKED"),
-  })}
-  data-currency-locale={lang === "el" ? "el-CY" : "en-CY"}>
-  (function () {
-    var d = document.currentScript.dataset;
-    var locale = d.currencyLocale;
-    var statusLabels = JSON.parse(d.statusLabels || "{}");
-
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, function (c) {
-        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
-      });
-    }
-    function fmtDate(iso) {
-      try { return new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" }); }
-      catch (e) { return iso; }
-    }
-    function fmtMoney(amount, currency) {
-      try { return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "EUR" }).format(parseFloat(amount)); }
-      catch (e) { return (currency || "") + " " + amount; }
-    }
-
-    function render(c) {
-      var listEl = document.getElementById("orders-list");
-      if (!c) { listEl.innerHTML = '<p class="acc-muted">…</p>'; return; }
-      var orders = c.orders || [];
-      if (orders.length === 0) {
-        listEl.innerHTML = '<p class="acc-muted">' + escapeHtml(d.empty) + '</p>' +
-          '<a class="acc-btn acc-btn-ghost" href="' + escapeHtml(d.shopHref) + '">' + escapeHtml(d.startShopping) + '</a>';
-        return;
-      }
-      listEl.innerHTML = orders.map(function (o, idx) {
-        var totalAmt = (o.totalPrice && o.totalPrice.amount) || "0";
-        var cur = (o.totalPrice && o.totalPrice.currencyCode) || "EUR";
-        var fin = o.financialStatus || "";
-        var ful = o.fulfillmentStatus || "";
-        var finLabel = statusLabels[fin] || fin;
-        var fulLabel = statusLabels[ful] || ful;
-        var ship = (o.shippingAddress && o.shippingAddress.formatted) || [];
-        var items = o.lineItems || [];
-
-        var itemRows = items.map(function (li) {
-          var v = li.variant;
-          var img = v && v.image && v.image.url
-            ? '<img src="' + escapeHtml(v.image.url) + '" alt="' + escapeHtml(li.title || "") + '" style="width:48px;height:48px;border-radius:6px;object-fit:contain;background:#f8fafc;">'
-            : '<div style="width:48px;height:48px;border-radius:6px;background:#f1f5fb;"></div>';
-          var price = v && v.price ? fmtMoney(v.price.amount, v.price.currencyCode) : "";
-          return '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.45rem 0;">' +
-            img +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:500;color:#1e3a5f;font-size:0.92rem;">' + escapeHtml(li.title || "") + '</div>' +
-              '<div class="acc-muted" style="font-size:0.82rem;">×' + li.quantity + (v && v.title && v.title !== "Default Title" ? " · " + escapeHtml(v.title) : "") + '</div>' +
-            '</div>' +
-            (price ? '<div class="acc-muted" style="font-size:0.85rem;">' + escapeHtml(price) + '</div>' : "") +
-          '</div>';
-        }).join("");
-
-        return '<details style="border:1px solid #e8edf3;border-radius:10px;margin-bottom:0.75rem;padding:0.85rem 1rem;" ' + (idx === 0 ? "open" : "") + '>' +
-          '<summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.5rem;">' +
-            '<div>' +
-              '<div style="font-weight:700;color:#1e3a5f;">' + escapeHtml(d.orderNum.replace("{number}", o.orderNumber)) + '</div>' +
-              '<div class="acc-muted" style="font-size:0.85rem;">' + escapeHtml(d.placed.replace("{date}", fmtDate(o.processedAt))) + '</div>' +
-            '</div>' +
-            '<div style="text-align:right;">' +
-              '<div style="font-weight:700;color:#1e3a5f;">' + escapeHtml(fmtMoney(totalAmt, cur)) + '</div>' +
-              '<div class="acc-muted" style="font-size:0.8rem;">' +
-                (finLabel ? '<span style="background:#ecfdf5;color:#047857;padding:0.1rem 0.45rem;border-radius:999px;font-size:0.72rem;font-weight:600;">' + escapeHtml(finLabel) + '</span> ' : "") +
-                (fulLabel ? '<span style="background:#eff6ff;color:#1e40af;padding:0.1rem 0.45rem;border-radius:999px;font-size:0.72rem;font-weight:600;">' + escapeHtml(fulLabel) + '</span>' : "") +
-              '</div>' +
-            '</div>' +
-          '</summary>' +
-          '<div style="margin-top:0.75rem;border-top:1px solid #f1f5fb;padding-top:0.5rem;">' + itemRows + '</div>' +
-          (ship.length ? '<div style="margin-top:0.75rem;font-size:0.82rem;color:#6b7280;"><strong>' + escapeHtml(d.shipTo) + ':</strong> ' + ship.map(escapeHtml).join(", ") + '</div>' : "") +
-          (o.statusUrl ? '<div style="margin-top:0.75rem;"><a class="acc-link" href="' + escapeHtml(o.statusUrl) + '" target="_blank" rel="noopener">' + escapeHtml(d.viewStatus) + ' →</a></div>' : "") +
-        '</details>';
-      }).join("");
-    }
-
-    function ready(fn) {
-      if (document.readyState !== "loading") fn();
-      else document.addEventListener("DOMContentLoaded", fn);
-    }
-    ready(function () {
-      if (window.__customer) render(window.__customer);
-      document.addEventListener("customer:changed", function (e) { render(e.detail); });
-      if (window.Customer) window.Customer.refresh();
-    });
-  })();
-</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content={`0;url=${dest}`} />
+    <link rel="canonical" href={dest} />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script is:inline set:html={`window.location.replace(${JSON.stringify(dest)});`}></script>
+    <noscript>
+      <p>Redirecting to <a href={dest}>{dest}</a>…</p>
+    </noscript>
+  </body>
+</html>

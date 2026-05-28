@@ -1,99 +1,20 @@
 ---
-import AccountLayout from "../../components/AccountLayout.astro";
-import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+import { shopifyConfig } from "../../lib/shopify";
 
-const lang = pickLang(Astro.currentLocale, Astro.url);
-const t = useTranslations(lang);
-const lp = (p: string) => localizeHref(p, lang);
+const dest = `https://${shopifyConfig.store}/account/register`;
 ---
-
-<AccountLayout section="dashboard" pageTitle={t("account.register.title")} publicAuth>
-  <h1 class="acc-h1">{t("account.register.title")}</h1>
-  <p class="acc-muted">{t("account.register.subtitle")}</p>
-
-  <div id="reg-alert" class="acc-alert acc-alert-error" role="alert"></div>
-
-  <form id="reg-form" class="acc-form" novalidate>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
-      <div class="acc-field">
-        <label class="acc-label" for="reg-firstName">{t("account.register.firstName")}</label>
-        <input class="acc-input" id="reg-firstName" name="firstName" type="text" autocomplete="given-name" required />
-      </div>
-      <div class="acc-field">
-        <label class="acc-label" for="reg-lastName">{t("account.register.lastName")}</label>
-        <input class="acc-input" id="reg-lastName" name="lastName" type="text" autocomplete="family-name" required />
-      </div>
-    </div>
-    <div class="acc-field">
-      <label class="acc-label" for="reg-email">{t("account.register.email")}</label>
-      <input class="acc-input" id="reg-email" name="email" type="email" autocomplete="email" required />
-    </div>
-    <div class="acc-field">
-      <label class="acc-label" for="reg-phone">{t("account.register.phone")}</label>
-      <input class="acc-input" id="reg-phone" name="phone" type="tel" autocomplete="tel" />
-    </div>
-    <div class="acc-field">
-      <label class="acc-label" for="reg-password">{t("account.register.password")}</label>
-      <input class="acc-input" id="reg-password" name="password" type="password" autocomplete="new-password" minlength="5" required />
-    </div>
-    <label class="acc-checkbox-row">
-      <input id="reg-marketing" name="acceptsMarketing" type="checkbox" />
-      {t("account.register.acceptsMarketing")}
-    </label>
-    <div>
-      <button class="acc-btn" id="reg-submit" type="submit">{t("account.register.submit")}</button>
-    </div>
-    <div class="acc-muted" style="margin-top:0.5rem;">
-      {t("account.register.haveAccount")} <a class="acc-link" href={lp("/account/login")}>{t("account.register.signIn")}</a>
-    </div>
-  </form>
-</AccountLayout>
-
-<script is:inline data-dashboard-href={lp("/account")} data-err-generic={t("account.error.generic")}>
-  (function () {
-    var script = document.currentScript;
-    var dashboard = script.dataset.dashboardHref;
-    var errGeneric = script.dataset.errGeneric;
-    function ready(fn) {
-      if (document.readyState !== "loading") fn();
-      else document.addEventListener("DOMContentLoaded", fn);
-    }
-    ready(function () {
-      if (localStorage.getItem("sf_customer_token")) {
-        window.location.replace(dashboard);
-        return;
-      }
-      var form = document.getElementById("reg-form");
-      var alertEl = document.getElementById("reg-alert");
-      var submit = document.getElementById("reg-submit");
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        alertEl.classList.remove("show");
-        alertEl.textContent = "";
-        if (!window.Customer) return;
-        var input = {
-          firstName: form.firstName.value.trim(),
-          lastName: form.lastName.value.trim(),
-          email: form.email.value.trim(),
-          password: form.password.value,
-          acceptsMarketing: !!form.acceptsMarketing.checked,
-        };
-        var phone = form.phone.value.trim();
-        if (phone) input.phone = phone;
-        if (!input.firstName || !input.lastName || !input.email || !input.password) return;
-        submit.disabled = true;
-        var orig = submit.textContent;
-        submit.textContent = "…";
-        window.Customer.register(input)
-          .then(function () { window.location.replace(dashboard); })
-          .catch(function (err) {
-            console.error("Registration failed:", err);
-            alertEl.textContent = (err && err.message) || errGeneric;
-            alertEl.classList.add("show");
-            submit.disabled = false;
-            submit.textContent = orig;
-          });
-      });
-    });
-  })();
-</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content={`0;url=${dest}`} />
+    <link rel="canonical" href={dest} />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script is:inline set:html={`window.location.replace(${JSON.stringify(dest)});`}></script>
+    <noscript>
+      <p>Redirecting to <a href={dest}>{dest}</a>…</p>
+    </noscript>
+  </body>
+</html>

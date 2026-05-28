@@ -1,85 +1,20 @@
 ---
-// Account activation landing page — used when an existing Shopify customer
-// has been invited but never set a password. Takes ?url=<activation-url>
-// from the Shopify invite email and finishes the activation client-side.
-import AccountLayout from "../../components/AccountLayout.astro";
-import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+import { shopifyConfig } from "../../lib/shopify";
 
-const lang = pickLang(Astro.currentLocale, Astro.url);
-const t = useTranslations(lang);
-const lp = (p: string) => localizeHref(p, lang);
+const dest = `https://${shopifyConfig.store}/account/login`;
 ---
-
-<AccountLayout section="dashboard" pageTitle={t("account.activate.title")} publicAuth>
-  <h1 class="acc-h1">{t("account.activate.title")}</h1>
-  <p class="acc-muted">{t("account.activate.subtitle")}</p>
-
-  <div id="act-alert" class="acc-alert acc-alert-error" role="alert"></div>
-
-  <form id="act-form" class="acc-form" novalidate>
-    <div class="acc-field">
-      <label class="acc-label" for="act-password">{t("account.reset.password")}</label>
-      <input class="acc-input" id="act-password" name="password" type="password" autocomplete="new-password" minlength="5" required />
-    </div>
-    <div class="acc-field">
-      <label class="acc-label" for="act-confirm">{t("account.reset.passwordConfirm")}</label>
-      <input class="acc-input" id="act-confirm" name="confirm" type="password" autocomplete="new-password" minlength="5" required />
-    </div>
-    <div>
-      <button class="acc-btn" id="act-submit" type="submit">{t("account.activate.submit")}</button>
-    </div>
-  </form>
-</AccountLayout>
-
-<script is:inline data-dashboard-href={lp("/account")} data-msg-mismatch={t("account.reset.mismatch")} data-msg-invalid={t("account.reset.invalidLink")} data-err-generic={t("account.error.generic")}>
-  (function () {
-    var script = document.currentScript;
-    var dashboard = script.dataset.dashboardHref;
-    var msgMismatch = script.dataset.msgMismatch;
-    var msgInvalid = script.dataset.msgInvalid;
-    var errGeneric = script.dataset.errGeneric;
-
-    function ready(fn) {
-      if (document.readyState !== "loading") fn();
-      else document.addEventListener("DOMContentLoaded", fn);
-    }
-    ready(function () {
-      var url = new URLSearchParams(window.location.search).get("url");
-      var form = document.getElementById("act-form");
-      var alertEl = document.getElementById("act-alert");
-      var submit = document.getElementById("act-submit");
-
-      if (!url) {
-        alertEl.classList.add("show");
-        alertEl.textContent = msgInvalid;
-        submit.disabled = true;
-        return;
-      }
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        alertEl.classList.remove("show");
-        alertEl.textContent = "";
-        var pw = form.password.value;
-        var cf = form.confirm.value;
-        if (pw !== cf) {
-          alertEl.textContent = msgMismatch;
-          alertEl.classList.add("show");
-          return;
-        }
-        if (!window.Customer) return;
-        submit.disabled = true;
-        var orig = submit.textContent;
-        submit.textContent = "…";
-        window.Customer.activateByUrl(url, pw)
-          .then(function () { window.location.replace(dashboard); })
-          .catch(function (err) {
-            console.error("Activation failed:", err);
-            alertEl.textContent = (err && err.message) || errGeneric;
-            alertEl.classList.add("show");
-            submit.disabled = false;
-            submit.textContent = orig;
-          });
-      });
-    });
-  })();
-</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content={`0;url=${dest}`} />
+    <link rel="canonical" href={dest} />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script is:inline set:html={`window.location.replace(${JSON.stringify(dest)});`}></script>
+    <noscript>
+      <p>Redirecting to <a href={dest}>{dest}</a>…</p>
+    </noscript>
+  </body>
+</html>
