@@ -91,8 +91,12 @@ function shopifyThumb(url: string, w = 300) {
       imagesrcset="/hero-480.webp 480w, /hero-768.webp 768w, /hero-1200.webp 1200w"
       imagesizes="100vw" />
     <title>{title}</title>
+    <link rel="alternate" hreflang={lang} href={Astro.url.pathname} />
+    <link rel="alternate" hreflang={otherLang} href={switchHref} />
+    <link rel="alternate" hreflang="x-default" href={lang === "en" ? Astro.url.pathname : switchHref} />
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header>
       <!-- ROW 1: White top bar — logo, search, lang, profile, cart -->
       <div class="top-bar">
@@ -226,7 +230,7 @@ function shopifyThumb(url: string, w = 300) {
     <!-- ══════════════════════════════════════
          SEARCH OVERLAY (bottom sheet)
          ══════════════════════════════════════ -->
-    <div class="sov-backdrop" id="sov-backdrop" role="dialog" aria-modal="true" aria-label={t("search.title")}>
+    <div class="sov-backdrop" id="sov-backdrop" role="dialog" aria-modal="true" aria-label={t("search.title")} data-locale-prefix={lang === "el" ? "/el" : ""} data-search-href={lp("/search")}>
       <div class="sov-panel" id="sov-panel">
         <div class="sov-inner">
 
@@ -274,7 +278,7 @@ function shopifyThumb(url: string, w = 300) {
                 {newProducts.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -299,7 +303,7 @@ function shopifyThumb(url: string, w = 300) {
                 {popularProducts.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -324,7 +328,7 @@ function shopifyThumb(url: string, w = 300) {
                 {saleProductsFinal.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -349,7 +353,7 @@ function shopifyThumb(url: string, w = 300) {
                 {wheelchairProducts.map((p: any) => {
                   const d = pdp(p);
                   return (
-                    <a href={lp(`/products/${p.handle}`)} class="sov-prod" id="sov-link">
+                    <a href={lp(`/products/${p.handle}`)} class="sov-prod">
                       <div class="sov-prod-thumb">
                         {p.featuredImage
                           ? <img src={shopifyThumb(p.featuredImage.url, 120)} alt={p.featuredImage.altText || p.title} width="80" height="80" loading="lazy" />
@@ -453,7 +457,7 @@ function shopifyThumb(url: string, w = 300) {
 
     </div>
 
-    <main>
+    <main id="main-content">
       <slot />
     </main>
     <footer class="site-footer">
@@ -577,9 +581,8 @@ function shopifyThumb(url: string, w = 300) {
             {lang === "el" ? "Με την υποστήριξη" : "Powered by"} <a href="https://www.itdev.gr/" target="_blank" rel="noopener noreferrer">IT DEV</a>
           </div>
           <div class="footer-bottom-links">
-            <a href={lp("/pages/privacy-policy")}>{t("footer.privacyPolicy")}</a>
             <a href={lp("/pages/terms-of-service")}>{t("nav.termsOfService")}</a>
-            <a href={lp("/pages/refund-policy")}>{lang === "el" ? "Πολιτική Επιστροφών" : "Refund Policy"}</a>
+            <a href={lp("/pages/refund-cancellation-policy")}>{t("nav.refundPolicy")}</a>
           </div>
         </div>
       </div>
@@ -626,6 +629,17 @@ function shopifyThumb(url: string, w = 300) {
       var sovSeeAll     = document.getElementById("sov-see-all");
       var sovQueryLabel = document.getElementById("sov-query-label");
 
+      /* ── Locale-aware paths ── */
+      var LOCALE_PREFIX = (backdrop && backdrop.dataset && backdrop.dataset.localePrefix) || "";
+      var SEARCH_HREF   = (backdrop && backdrop.dataset && backdrop.dataset.searchHref) || "/search";
+
+      /* ── XSS helper ── */
+      function escapeHtml(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+
       /* ── Load embedded product data ── */
       var searchData = [];
       try {
@@ -671,7 +685,7 @@ function shopifyThumb(url: string, w = 300) {
 
         if (filtered.length === 0) {
           if (sovResGrid) sovResGrid.innerHTML =
-            '<p class="sov-no-results">No products found for &ldquo;' + query + '&rdquo;</p>';
+            '<p class="sov-no-results">No products found for &ldquo;' + escapeHtml(query) + '&rdquo;</p>';
           if (sovSeeAll) sovSeeAll.style.display = "none";
           return;
         }
@@ -679,20 +693,22 @@ function shopifyThumb(url: string, w = 300) {
         if (sovResGrid) {
           sovResGrid.innerHTML = filtered.slice(0, 12).map(function (p) {
             var isSale    = p.c > 0 && p.c > p.p;
+            var safeCu    = escapeHtml(p.cu);
             var priceHtml = isSale
-              ? '<s class="sov-compare-price">' + p.cu + " " + p.c.toFixed(2) + '</s>'
-                + '<span class="sov-curr-price sale">' + p.cu + " " + p.p.toFixed(2) + "</span>"
-              : '<span class="sov-curr-price">'  + p.cu + " " + p.p.toFixed(2) + "</span>";
+              ? '<s class="sov-compare-price">' + safeCu + " " + p.c.toFixed(2) + '</s>'
+                + '<span class="sov-curr-price sale">' + safeCu + " " + p.p.toFixed(2) + "</span>"
+              : '<span class="sov-curr-price">'  + safeCu + " " + p.p.toFixed(2) + "</span>";
             var availHtml = '<span class="sov-avail ' + (p.a ? "in" : "out") + '">'
               + "● " + (p.a ? "In Stock" : "Out of Stock") + "</span>";
+            var safeImg = escapeHtml(p.i);
             var imgHtml = p.i
-              ? '<img src="' + p.i + (p.i.indexOf('?')>-1?'&':'?') + 'width=120" alt="' + p.t.replace(/"/g, "&quot;") + '" width="80" height="80" loading="lazy" />'
+              ? '<img src="' + safeImg + (p.i.indexOf('?')>-1?'&':'?') + 'width=120" alt="' + escapeHtml(p.t) + '" width="80" height="80" loading="lazy" />'
               : '<div class="sov-prod-no-img"></div>';
             return (
-              '<a href="/products/' + p.h + '" class="sov-prod sov-result-item">'
+              '<a href="' + LOCALE_PREFIX + '/products/' + escapeHtml(p.h) + '" class="sov-prod sov-result-item">'
               + '<div class="sov-prod-thumb">' + imgHtml + "</div>"
               + '<div class="sov-prod-info">'
-              +   '<p class="sov-prod-name">' + p.t + "</p>"
+              +   '<p class="sov-prod-name">' + escapeHtml(p.t) + "</p>"
               +   '<div class="sov-price-row">' + priceHtml + "</div>"
               +   availHtml
               + "</div></a>"
@@ -702,7 +718,7 @@ function shopifyThumb(url: string, w = 300) {
 
         if (sovSeeAll && sovQueryLabel) {
           sovQueryLabel.textContent = query;
-          sovSeeAll.href = "/search?q=" + encodeURIComponent(query);
+          sovSeeAll.href = SEARCH_HREF + "?q=" + encodeURIComponent(query);
           sovSeeAll.style.display = "";
         }
       }
@@ -717,7 +733,7 @@ function shopifyThumb(url: string, w = 300) {
         sovInput.addEventListener("keydown", function (e) {
           if (e.key === "Enter") {
             var q = sovInput.value.trim();
-            if (q) window.location.href = "/search?q=" + encodeURIComponent(q);
+            if (q) window.location.href = SEARCH_HREF + "?q=" + encodeURIComponent(q);
           }
         });
       }
@@ -732,24 +748,14 @@ function shopifyThumb(url: string, w = 300) {
         });
       });
 
-      /* ── Close on backdrop click ── */
+      /* ── Close on backdrop click (consolidated) ── */
       if (backdrop) {
         backdrop.addEventListener("click", function (e) {
-          if (e.target === backdrop) closeSOV();
+          if (e.target === backdrop) { closeSOV(); return; }
+          if (e.target.closest(".sov-prod")) { closeSOV(); /* link follows */ return; }
         });
       }
       if (sovClose) sovClose.addEventListener("click", closeSOV);
-
-      /* ── Close product links (close overlay when navigating) ── */
-      if (backdrop) {
-        backdrop.addEventListener("click", function (e) {
-          var link = e.target.closest(".sov-prod");
-          if (link) {
-            backdrop.classList.remove("is-open");
-            document.body.style.overflow = "";
-          }
-        });
-      }
 
       /* ── Escape key ── */
       document.addEventListener("keydown", function (e) {
@@ -757,6 +763,22 @@ function shopifyThumb(url: string, w = 300) {
           closeSOV();
         }
       });
+
+      /* ── Focus trap ── */
+      function trapTab(container, e) {
+        if (e.key !== "Tab") return;
+        var f = container.querySelectorAll('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        f = Array.from(f).filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+        if (f.length === 0) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      if (backdrop) {
+        backdrop.addEventListener("keydown", function (e) {
+          if (backdrop.classList.contains("is-open")) trapTab(panel, e);
+        });
+      }
     })();
     </script>
 
@@ -860,6 +882,24 @@ function shopifyThumb(url: string, w = 300) {
         });
       });
 
+      /* ── Mobile drawer focus trap ── */
+      (function () {
+        function trapTabDrawer(container, e) {
+          if (e.key !== "Tab") return;
+          var f = container.querySelectorAll('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+          f = Array.from(f).filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+          if (f.length === 0) return;
+          var first = f[0], last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+        if (drawer) {
+          drawer.addEventListener("keydown", function (e) {
+            if (drawer.classList.contains("is-open")) trapTabDrawer(drawer, e);
+          });
+        }
+      })();
+
       /* ── Search bar → opens overlay ── */
       (function () {
         var input = document.querySelector(".top-search-input");
@@ -904,6 +944,19 @@ function shopifyThumb(url: string, w = 300) {
     max-width: 100vw;
     overflow-x: clip;
   }
+
+  /* ── Skip-to-content ── */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: #1e3a5f;
+    color: white;
+    padding: 0.75rem 1rem;
+    z-index: 9999;
+    text-decoration: none;
+  }
+  .skip-link:focus { left: 0; }
 
   /* ══════════════════════════════════════
      HEADER
