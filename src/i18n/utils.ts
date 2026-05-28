@@ -53,9 +53,9 @@ export function switchLocaleHref(pathname: string, target: Lang): string {
   const rest = isPrefixed ? segments.slice(1) : segments;
 
   if (target === defaultLang) {
-    return "/" + (rest.length ? rest.join("/") + "/" : "");
+    return "/" + (rest.length ? rest.join("/") : "");
   }
-  return "/" + target + "/" + (rest.length ? rest.join("/") + "/" : "");
+  return "/" + target + (rest.length ? "/" + rest.join("/") : "/");
 }
 
 /**

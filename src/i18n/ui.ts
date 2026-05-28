@@ -516,7 +516,7 @@ export const ui = {
     "account.addresses.form.cancel": "Ακύρωση",
     "account.addresses.confirmDelete": "Διαγραφή αυτής της διεύθυνσης;",
 
-    "account.logout.message": "Σύνδεση…",
+    "account.logout.message": "Αποσύνδεση…",
 
     "account.error.invalidCredentials": "Λάθος email ή κωδικός πρόσβασης.",
     "account.error.generic": "Κάτι πήγε στραβά. Παρακαλώ δοκιμάστε ξανά.",
