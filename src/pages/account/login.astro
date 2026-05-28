@@ -1,84 +1,20 @@
 ---
-import AccountLayout from "../../components/AccountLayout.astro";
-import { pickLang, useTranslations, localizeHref } from "../../i18n/utils";
+import { shopifyConfig } from "../../lib/shopify";
 
-const lang = pickLang(Astro.currentLocale, Astro.url);
-const t = useTranslations(lang);
-const lp = (p: string) => localizeHref(p, lang);
+const dest = `https://${shopifyConfig.store}/account/login`;
 ---
-
-<AccountLayout section="dashboard" pageTitle={t("account.login.title")} publicAuth>
-  <h1 class="acc-h1">{t("account.login.title")}</h1>
-  <p class="acc-muted">{t("account.login.subtitle")}</p>
-
-  <div id="login-alert" class="acc-alert acc-alert-error" role="alert"></div>
-
-  <form id="login-form" class="acc-form" novalidate>
-    <div class="acc-field">
-      <label class="acc-label" for="login-email">{t("account.login.email")}</label>
-      <input class="acc-input" id="login-email" name="email" type="email" autocomplete="email" required />
-    </div>
-    <div class="acc-field">
-      <label class="acc-label" for="login-password">{t("account.login.password")}</label>
-      <input class="acc-input" id="login-password" name="password" type="password" autocomplete="current-password" required />
-    </div>
-    <div>
-      <button class="acc-btn" id="login-submit" type="submit">{t("account.login.submit")}</button>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:0.5rem;flex-wrap:wrap;gap:0.5rem;">
-      <a class="acc-link" href={lp("/account/recover")}>{t("account.login.forgot")}</a>
-      <span class="acc-muted">{t("account.login.noAccount")} <a class="acc-link" href={lp("/account/register")}>{t("account.login.createAccount")}</a></span>
-    </div>
-  </form>
-</AccountLayout>
-
-<script is:inline data-default-next={lp("/account")} data-err-credentials={t("account.error.invalidCredentials")}>
-  (function () {
-    var script = document.currentScript;
-    var defaultNext = script.dataset.defaultNext;
-    var errCredentials = script.dataset.errCredentials;
-
-    function getQueryParam(name) {
-      var p = new URLSearchParams(window.location.search);
-      var v = p.get(name);
-      return v ? decodeURIComponent(v) : null;
-    }
-    var nextUrl = getQueryParam("next") || defaultNext;
-
-    function ready(fn) {
-      if (document.readyState !== "loading") fn();
-      else document.addEventListener("DOMContentLoaded", fn);
-    }
-    ready(function () {
-      // If already logged in, bounce.
-      if (localStorage.getItem("sf_customer_token")) {
-        window.location.replace(nextUrl);
-        return;
-      }
-      var form = document.getElementById("login-form");
-      var alertEl = document.getElementById("login-alert");
-      var submit = document.getElementById("login-submit");
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        alertEl.classList.remove("show");
-        alertEl.textContent = "";
-        if (!window.Customer) { alertEl.textContent = "Loading… please try again."; alertEl.classList.add("show"); return; }
-        var email = form.email.value.trim();
-        var password = form.password.value;
-        if (!email || !password) return;
-        submit.disabled = true;
-        var origText = submit.textContent;
-        submit.textContent = "…";
-        window.Customer.login(email, password)
-          .then(function () { window.location.replace(nextUrl); })
-          .catch(function (err) {
-            console.error("Login failed:", err);
-            alertEl.textContent = (err && err.message) || errCredentials;
-            alertEl.classList.add("show");
-            submit.disabled = false;
-            submit.textContent = origText;
-          });
-      });
-    });
-  })();
-</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content={`0;url=${dest}`} />
+    <link rel="canonical" href={dest} />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script is:inline set:html={`window.location.replace(${JSON.stringify(dest)});`}></script>
+    <noscript>
+      <p>Redirecting to <a href={dest}>{dest}</a>…</p>
+    </noscript>
+  </body>
+</html>
