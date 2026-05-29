@@ -52,8 +52,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/lifevac.svg", alt: "LifeVac" }, // TODO(content)
     ],
     children: [
-      { label: "Winix - Air Purifiers", labelEl: "Winix - Καθαριστές Αέρα", handle: "purifiers", icon: "/images/subcategories/air-purifier.svg", description: "True-HEPA air purifiers for home and clinic", descriptionEl: "Καθαριστές αέρα True-HEPA για το σπίτι και την κλινική" },
-      { label: "Oxygen", labelEl: "Οξυγόνο", handle: "oxygen", icon: "/images/subcategories/oxygen.svg", description: "Concentrators and supplemental oxygen units", descriptionEl: "Συμπυκνωτές και μονάδες συμπληρωματικού οξυγόνου" }, // TODO(shopify)
+      { label: "Winix - Air Purifiers", labelEl: "Winix - Καθαριστές Αέρα", handle: "clean-air", icon: "/images/subcategories/air-purifier.svg", description: "True-HEPA air purifiers for home and clinic", descriptionEl: "Καθαριστές αέρα True-HEPA για το σπίτι και την κλινική" },
+      { label: "Oxygen", labelEl: "Οξυγόνο", handle: "oxygen-new", icon: "/images/subcategories/oxygen.svg", description: "Concentrators and supplemental oxygen units", descriptionEl: "Συμπυκνωτές και μονάδες συμπληρωματικού οξυγόνου" }, // TODO(shopify)
       { label: "LifeVac - Antichocking Device", labelEl: "LifeVac - Συσκευή Αντιμετώπισης Πνιγμού", handle: "lifevac", icon: "/images/subcategories/lifevac.svg", description: "Non-powered choking rescue device", descriptionEl: "Συσκευή διάσωσης από πνιγμό χωρίς ρεύμα" }, // TODO(shopify)
     ],
   },
@@ -68,8 +68,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/kybun.svg", alt: "kybun" },
     ],
     children: [
-      { label: "Men's Shoes", labelEl: "Ανδρικά Παπούτσια", handle: "kybun-mens-shoes", icon: "/images/subcategories/mens-shoes.svg", description: "Air-cushioned men's footwear", descriptionEl: "Ανδρικά παπούτσια με μαξιλάρι αέρα" }, // TODO(shopify)
-      { label: "Women's Shoes", labelEl: "Γυναικεία Παπούτσια", handle: "kybun-womens-shoes", icon: "/images/subcategories/womens-shoes.svg", description: "Air-cushioned women's footwear", descriptionEl: "Γυναικεία παπούτσια με μαξιλάρι αέρα" }, // TODO(shopify)
+      { label: "Men's Shoes", labelEl: "Ανδρικά Παπούτσια", handle: "men-shoes-new", icon: "/images/subcategories/mens-shoes.svg", description: "Air-cushioned men's footwear", descriptionEl: "Ανδρικά παπούτσια με μαξιλάρι αέρα" }, // TODO(shopify)
+      { label: "Women's Shoes", labelEl: "Γυναικεία Παπούτσια", handle: "womens-shoes", icon: "/images/subcategories/womens-shoes.svg", description: "Air-cushioned women's footwear", descriptionEl: "Γυναικεία παπούτσια με μαξιλάρι αέρα" }, // TODO(shopify)
       { label: "Mats", labelEl: "Τάπητες", handle: "kybun-mats", icon: "/images/subcategories/mats.svg", description: "Active-standing therapy mats", descriptionEl: "Τάπητες ενεργητικής στάσης για θεραπεία" }, // TODO(shopify)
     ],
   },
@@ -86,15 +86,19 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/sponaplast.svg", alt: "Sponaplast" },
     ],
     children: [
-      { label: "Neck", labelEl: "Αυχένας", handle: "cervical", icon: "/images/subcategories/neck.svg", description: "Cervical collars and neck supports", descriptionEl: "Αυχενικά κολάρα και στηρίγματα αυχένα" },
+      { label: "Neck", labelEl: "Αυχένας", handle: "neck-collars", icon: "/images/subcategories/neck.svg", description: "Cervical collars and neck supports", descriptionEl: "Αυχενικά κολάρα και στηρίγματα αυχένα" },
       { label: "Back & Lumbar", labelEl: "Πλάτη & Οσφύς", handle: "back-lumbar", icon: "/images/subcategories/back.svg", description: "Lumbar belts and posture braces", descriptionEl: "Οσφυϊκές ζώνες και νάρθηκες στάσης" }, // TODO(shopify) – consolidate
-      { label: "Knee", labelEl: "Γόνατο", handle: "knee", icon: "/images/subcategories/knee.svg", description: "Knee braces, sleeves, stabilizers", descriptionEl: "Νάρθηκες γόνατος, επιγονατίδες, σταθεροποιητές" },
-      { label: "Hip", labelEl: "Ισχίο", handle: "hip", icon: "/images/subcategories/hip.svg", description: "Hip braces and post-surgery supports", descriptionEl: "Νάρθηκες ισχίου και μετεγχειρητικά στηρίγματα" },
-      { label: "Wrist & Thumb", labelEl: "Καρπός & Αντίχειρας", handle: "wrist-thumb-supports", icon: "/images/subcategories/wrist.svg", description: "Wrist splints and thumb stabilizers", descriptionEl: "Νάρθηκες καρπού και σταθεροποιητές αντίχειρα" },
-      { label: "Ankle", labelEl: "Αστράγαλος", handle: "ankle", icon: "/images/subcategories/ankle.svg", description: "Ankle braces and sprain supports", descriptionEl: "Νάρθηκες αστραγάλου και στηρίγματα για διαστρέμματα" },
-      { label: "Elbow", labelEl: "Αγκώνας", handle: "elbow", icon: "/images/subcategories/elbow.svg", description: "Elbow braces and tennis-elbow straps", descriptionEl: "Νάρθηκες αγκώνα και ζώνες για επικονδυλίτιδα" },
-      { label: "Hand", labelEl: "Χέρι", handle: "hand", icon: "/images/subcategories/hand.svg", description: "Hand splints and finger supports", descriptionEl: "Νάρθηκες χεριού και στηρίγματα δακτύλων" },
-      { label: "Head", labelEl: "Κεφάλι", handle: "head", icon: "/images/subcategories/head.svg", description: "Helmets and protective head supports", descriptionEl: "Κράνη και προστατευτικά στηρίγματα κεφαλιού" },
+      { label: "Knee", labelEl: "Γόνατο", handle: "knee-new", icon: "/images/subcategories/knee.svg", description: "Knee braces, sleeves, stabilizers", descriptionEl: "Νάρθηκες γόνατος, επιγονατίδες, σταθεροποιητές" },
+      { label: "Hip", labelEl: "Ισχίο", handle: "hip-new", icon: "/images/subcategories/hip.svg", description: "Hip braces and post-surgery supports", descriptionEl: "Νάρθηκες ισχίου και μετεγχειρητικά στηρίγματα" },
+      { label: "Wrist & Thumb", labelEl: "Καρπός & Αντίχειρας", handle: "wrist-thumb-new", icon: "/images/subcategories/wrist.svg", description: "Wrist splints and thumb stabilizers", descriptionEl: "Νάρθηκες καρπού και σταθεροποιητές αντίχειρα" },
+      { label: "Ankle", labelEl: "Αστράγαλος", handle: "ankle-new", icon: "/images/subcategories/ankle.svg", description: "Ankle braces and sprain supports", descriptionEl: "Νάρθηκες αστραγάλου και στηρίγματα για διαστρέμματα" },
+      { label: "Elbow", labelEl: "Αγκώνας", handle: "elbow-new", icon: "/images/subcategories/elbow.svg", description: "Elbow braces and tennis-elbow straps", descriptionEl: "Νάρθηκες αγκώνα και ζώνες για επικονδυλίτιδα" },
+      { label: "Hand", labelEl: "Χέρι", handle: "hand-new", icon: "/images/subcategories/hand.svg", description: "Hand splints and finger supports", descriptionEl: "Νάρθηκες χεριού και στηρίγματα δακτύλων" },
+      { label: "Head", labelEl: "Κεφάλι", handle: "head-new", icon: "/images/subcategories/head.svg", description: "Helmets and protective head supports", descriptionEl: "Κράνη και προστατευτικά στηρίγματα κεφαλιού" },
+      { label: "Shoulder", labelEl: "Ώμος", handle: "shoulder", description: "Shoulder braces and immobilizers", descriptionEl: "Νάρθηκες και ακινητοποιητές ώμου" },
+      { label: "Thoracic", labelEl: "Θωρακικό", handle: "thoracic", description: "Thoracic spine supports and posture braces", descriptionEl: "Στηρίγματα θωρακικής μοίρας και νάρθηκες στάσης" },
+      { label: "Thigh", labelEl: "Μηρός", handle: "thigh", description: "Thigh wraps and supports", descriptionEl: "Στηρίγματα και περιτυλίγματα μηρού" },
+      { label: "Insoles", labelEl: "Πάτοι", handle: "orthopedic-insoles", description: "Orthopedic insoles for everyday footwear", descriptionEl: "Ορθοπεδικοί πάτοι για καθημερινά υποδήματα" },
     ],
   },
   {
@@ -109,10 +113,11 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/etac.svg", alt: "Etac" }, // TODO(content)
     ],
     children: [
-      { label: "Hospital Beds", labelEl: "Νοσοκομειακά Κρεβάτια", handle: "hospital-beds", icon: "/images/subcategories/hospital-bed.svg", description: "Adjustable beds for home and care", descriptionEl: "Ρυθμιζόμενα κρεβάτια για το σπίτι και τη φροντίδα" },
-      { label: "Bathroom", labelEl: "Μπάνιο", handle: "bathroom-aids", icon: "/images/subcategories/bathroom.svg", description: "Shower seats, grab bars, bath aids", descriptionEl: "Καθίσματα ντους, χειρολαβές, βοηθήματα μπάνιου" },
-      { label: "Toilet Aids", labelEl: "Βοηθήματα Τουαλέτας", handle: "toilets-aids", icon: "/images/subcategories/toilet-aids.svg", description: "Raised seats and toilet frames", descriptionEl: "Ανυψωμένα καθίσματα και πλαίσια τουαλέτας" },
-      { label: "Decubitus Prevention", labelEl: "Πρόληψη Κατακλίσεων", handle: "decubitus-aids", icon: "/images/subcategories/decubitus.svg", description: "Pressure-relief mattresses and cushions", descriptionEl: "Στρώματα και μαξιλάρια ανακούφισης πίεσης" },
+      { label: "Hospital Beds", labelEl: "Νοσοκομειακά Κρεβάτια", handle: "hospital-beds-new", icon: "/images/subcategories/hospital-bed.svg", description: "Adjustable beds for home and care", descriptionEl: "Ρυθμιζόμενα κρεβάτια για το σπίτι και τη φροντίδα" },
+      { label: "Bathroom", labelEl: "Μπάνιο", handle: "bathroom-safety", icon: "/images/subcategories/bathroom.svg", description: "Shower seats, grab bars, bath aids", descriptionEl: "Καθίσματα ντους, χειρολαβές, βοηθήματα μπάνιου" },
+      { label: "Toilet Aids", labelEl: "Βοηθήματα Τουαλέτας", handle: "toilet-aids", icon: "/images/subcategories/toilet-aids.svg", description: "Raised seats and toilet frames", descriptionEl: "Ανυψωμένα καθίσματα και πλαίσια τουαλέτας" },
+      { label: "Decubitus Prevention", labelEl: "Πρόληψη Κατακλίσεων", handle: "decubitus-prevention", icon: "/images/subcategories/decubitus.svg", description: "Pressure-relief mattresses and cushions", descriptionEl: "Στρώματα και μαξιλάρια ανακούφισης πίεσης" },
+      { label: "Overbed Tables", labelEl: "Τραπεζάκια Κρεβατιού", handle: "overbed-tables", description: "Adjustable bedside and overbed tables", descriptionEl: "Ρυθμιζόμενα τραπεζάκια κρεβατιού και κομοδίνου" },
     ],
   },
   {
@@ -127,10 +132,10 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/beurer.svg", alt: "Beurer" }, // TODO(content)
     ],
     children: [
-      { label: "Pillows & Cushions", labelEl: "Μαξιλάρια & Καθίσματα", handle: "pillows-and-cushions", icon: "/images/subcategories/pillow.svg", description: "Posture and recovery cushions", descriptionEl: "Μαξιλάρια στάσης και αποκατάστασης" },
-      { label: "Exercise Equipment", labelEl: "Εξοπλισμός Άσκησης", handle: "exercise-equipment", icon: "/images/subcategories/exercise.svg", description: "Rehab and at-home fitness gear", descriptionEl: "Εξοπλισμός αποκατάστασης και γυμναστικής στο σπίτι" }, // TODO(shopify)
-      { label: "Massage Equipment", labelEl: "Εξοπλισμός Μασάζ", handle: "massage-equipment", icon: "/images/subcategories/massage.svg", description: "Handheld and seat massagers", descriptionEl: "Συσκευές μασάζ χειρός και καθίσματος" }, // TODO(shopify)
-      { label: "Hot & Cold Therapy", labelEl: "Θεραπεία Ζεστού & Κρύου", handle: "hot-cold-therapy", icon: "/images/subcategories/hot-cold.svg", description: "Pain-relief packs and wraps", descriptionEl: "Επιθέματα και περιτυλίγματα ανακούφισης πόνου" },
+      { label: "Pillows & Cushions", labelEl: "Μαξιλάρια & Καθίσματα", handle: "pillows-cushions-new", icon: "/images/subcategories/pillow.svg", description: "Posture and recovery cushions", descriptionEl: "Μαξιλάρια στάσης και αποκατάστασης" },
+      { label: "Exercise Equipment", labelEl: "Εξοπλισμός Άσκησης", handle: "exercise-equipment-new", icon: "/images/subcategories/exercise.svg", description: "Rehab and at-home fitness gear", descriptionEl: "Εξοπλισμός αποκατάστασης και γυμναστικής στο σπίτι" }, // TODO(shopify)
+      { label: "Massage Equipment", labelEl: "Εξοπλισμός Μασάζ", handle: "massage-new", icon: "/images/subcategories/massage.svg", description: "Handheld and seat massagers", descriptionEl: "Συσκευές μασάζ χειρός και καθίσματος" }, // TODO(shopify)
+      { label: "Hot & Cold Therapy", labelEl: "Θεραπεία Ζεστού & Κρύου", handle: "hot-cold-therapy-new", icon: "/images/subcategories/hot-cold.svg", description: "Pain-relief packs and wraps", descriptionEl: "Επιθέματα και περιτυλίγματα ανακούφισης πόνου" },
     ],
   },
   {
@@ -179,9 +184,9 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/alimed.svg", alt: "AliMed", href: "https://www.alimed.com" },
     ],
     children: [
-      { label: "Rollators & Walkers", labelEl: "Περιπατητήρες & Rollators", handle: "rollators", icon: "/images/subcategories/rollators.svg", description: "Wheeled support for confident daily mobility", descriptionEl: "Στήριξη με ρόδες για σίγουρη καθημερινή κίνηση" },
-      { label: "Crutches", labelEl: "Πατερίτσες", handle: "crutches", icon: "/images/subcategories/crutches.svg", description: "Underarm and forearm crutches for recovery", descriptionEl: "Πατερίτσες μασχάλης και πήχη για αποκατάσταση" },
-      { label: "Canes & Walking Sticks", labelEl: "Μπαστούνια & Βακτηρίες", handle: "canes", icon: "/images/subcategories/canes.svg", description: "Lightweight canes for everyday balance", descriptionEl: "Ελαφριά μπαστούνια για καθημερινή ισορροπία" },
+      { label: "Rollators & Walkers", labelEl: "Περιπατητήρες & Rollators", handle: "rollators-walkers-new", icon: "/images/subcategories/rollators.svg", description: "Wheeled support for confident daily mobility", descriptionEl: "Στήριξη με ρόδες για σίγουρη καθημερινή κίνηση" },
+      { label: "Crutches", labelEl: "Πατερίτσες", handle: "crutches-new", icon: "/images/subcategories/crutches.svg", description: "Underarm and forearm crutches for recovery", descriptionEl: "Πατερίτσες μασχάλης και πήχη για αποκατάσταση" },
+      { label: "Canes & Walking Sticks", labelEl: "Μπαστούνια & Βακτηρίες", handle: "canes-walking-sticks-new", icon: "/images/subcategories/canes.svg", description: "Lightweight canes for everyday balance", descriptionEl: "Ελαφριά μπαστούνια για καθημερινή ισορροπία" },
     ],
   },
   {
@@ -197,8 +202,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { src: "/images/suppliers/invacare.svg", alt: "Invacare" }, // TODO(content)
     ],
     children: [
-      { label: "Manual Wheelchairs", labelEl: "Χειροκίνητα Αναπηρικά Αμαξίδια", handle: "manual-wheelchairs", icon: "/images/subcategories/manual-wheelchair.svg", description: "Lightweight and transport chairs", descriptionEl: "Ελαφριά αμαξίδια και αμαξίδια μεταφοράς" },
-      { label: "Electric Wheelchairs", labelEl: "Ηλεκτρικά Αναπηρικά Αμαξίδια", handle: "wheelchairs-1", icon: "/images/subcategories/electric-wheelchair.svg", description: "Powered indoor and outdoor chairs", descriptionEl: "Ηλεκτρικά αμαξίδια εσωτερικού και εξωτερικού χώρου" },
+      { label: "Manual Wheelchairs", labelEl: "Χειροκίνητα Αναπηρικά Αμαξίδια", handle: "manual-wheelchairs-new", icon: "/images/subcategories/manual-wheelchair.svg", description: "Lightweight and transport chairs", descriptionEl: "Ελαφριά αμαξίδια και αμαξίδια μεταφοράς" },
+      { label: "Electric Wheelchairs", labelEl: "Ηλεκτρικά Αναπηρικά Αμαξίδια", handle: "electric-wheelchairs-new", icon: "/images/subcategories/electric-wheelchair.svg", description: "Powered indoor and outdoor chairs", descriptionEl: "Ηλεκτρικά αμαξίδια εσωτερικού και εξωτερικού χώρου" },
     ],
   },
 ];
